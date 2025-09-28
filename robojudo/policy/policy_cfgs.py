@@ -1,0 +1,213 @@
+from pydantic import field_validator, model_validator
+
+from robojudo.config import ASSETS_DIR, Config
+from robojudo.tools.tool_cfgs import DoFConfig
+
+
+class PolicyCfg(Config):
+    policy_type: str  # name of the policy class
+    robot: str  # robot name, e.g. "g1"
+
+    @property
+    def policy_file(self) -> str:
+        """path to the policy file, to be overrided in subclass"""
+        policy_file = ASSETS_DIR / f"models/{self.robot}/PLCAEHOLDER.pt"
+        return policy_file.as_posix()
+
+    disable_autoload: bool = False  # if True, disable auto loading of the policy file
+
+    freq: int = 50  # control frequency (Hz)
+
+    obs_dof: DoFConfig
+    action_dof: DoFConfig
+
+    # action post processing
+    action_scale: float = 1.0
+    action_clip: float | None = None  # clip action to [-action_clip, action_clip]
+    action_beta: float = 1.0  # action smoothing factor
+
+    # TODO: move to policy config
+    # history settings
+    history_length: int = 0  # number of history observations to use
+
+    # TODO
+    # # upper body override settings
+    # wrist_override_idxs: list[int] = []  # indices of the wrist joints to override
+
+    @property
+    def history_obs_size(self) -> int:
+        """size of the history observations, to be calc in subclass"""
+        return 0
+
+    @field_validator("action_scale", "action_clip")
+    def check_action_scale(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("action_scale must be positive")
+        return v
+
+    @model_validator(mode="after")
+    def check_history(self):
+        if self.history_length < 0:
+            raise ValueError("history_length cannot be negative")
+        if self.history_obs_size < 0:
+            raise ValueError("history_obs_size cannot be negative")
+        return self
+
+
+class UnitreePolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        dof_pos: float = 1.0
+        dof_vel: float = 0.05
+        ang_vel: float = 0.25
+        command: list[float] = [2.0, 2.0, 0.25]
+
+    policy_type: str = "UnitreePolicy"
+    policy_name: str = "motion"
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/unitree/{self.policy_name}.pt"
+        return policy_file.as_posix()
+
+    action_scale: float = 0.25
+    action_clip: float | None = None
+    action_beta: float = 0.8
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+    max_cmd: list[float] = [0.8, 0.5, 1.57]
+    commands_map: list[list[float]] = [
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0],
+        [1.0, 0.0, -1.0],
+    ]
+
+
+class SmoothPolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        ang_vel: float = 0.25
+        dof_vel: float = 0.05
+        lin_vel: float = 0.5
+
+    policy_type: str = "SmoothPolicy"
+    policy_name: str
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/smooth/{self.policy_name}.pt"
+        return policy_file.as_posix()
+
+    action_scale: float = 0.5
+    action_clip: float | None = 10.0
+    action_beta: float = 0.8
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+
+    history_length: int = 10
+
+    @property
+    def history_obs_size(self) -> int:
+        history_obs_size = 2 + 3 + 3 + 2 + 2 * self.obs_dof.num_dofs + self.action_dof.num_dofs
+        return history_obs_size
+
+    cycle_time: float = 0.8
+
+    commands_map: list[list[float]] = [
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0],
+        [1.0, 0.0, -1.0],
+    ]
+
+
+class H2HPolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        ang_vel: float = 1.0
+        dof_vel: float = 1.0
+
+    # obs_type as "v-teleop-extend-vr-max-nolinvel"
+    policy_type: str = "H2HStudentPolicy"
+    policy_name: str
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/h2h/{self.policy_name}.pt"
+        return policy_file.as_posix()
+
+    action_scale: float = 0.25
+    action_clip: float | None = 10.0
+    action_beta: float = 0.8
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    use_imu_torso: bool = False
+    use_dof_pos_offset: bool = False
+
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+
+    history_length: int = 25
+
+    @property
+    def history_obs_size(self) -> int:
+        history_obs_size = 2 * self.obs_dof.num_dofs + 3 + 3 + self.action_dof.num_dofs
+        return history_obs_size
+
+
+class AMOPolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        ang_vel: float = 0.25
+        dof_vel: float = 0.05
+
+    policy_type: str = "AMOPolicy"
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/amo/amo_jit.pt"
+        return policy_file.as_posix()
+
+    @property
+    def policy_adapter_file(self) -> str:
+        policy_adapter_file = ASSETS_DIR / f"models/{self.robot}/amo/adapter_jit.pt"
+        return policy_adapter_file.as_posix()
+
+    @property
+    def policy_adapter_norm_file(self) -> str:
+        policy_adapter_norm_file = ASSETS_DIR / f"models/{self.robot}/amo/adapter_norm_stats.pt"
+        return policy_adapter_norm_file.as_posix()
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+
+    action_scale: float = 0.25
+
+    commands_map: list[list[float]]
+
+
+class BeyondMimicPolicyCfg(PolicyCfg):
+    policy_type: str = "BeyondMimicPolicy"
+    disable_autoload: bool = True
+
+    policy_name: str
+    max_timestep: int = -1
+    start_timestep: int = 0
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/beyondmimic/{self.policy_name}.onnx"
+        return policy_file.as_posix()
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    action_scales: list[float]
+
+    without_state_estimator: bool
+    override_robot_anchor_pos: bool = True  # if True, drop pos fdb
+
+    use_modelmeta_config: bool = True  # if True, use the config from modelmeta
+    use_motion_from_model: bool = True  # if True, use the motion data of onnx model
+
+    @model_validator(mode="after")
+    def check_modelmeta(self):
+        if self.use_motion_from_model:
+            if not self.use_modelmeta_config:
+                raise ValueError("use_modelmeta_config must be True when use_motion_from_model")
+
+        return self

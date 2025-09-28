@@ -1,0 +1,16 @@
+[submodule "third_party/mujoco_viewer"]
+	path = third_party/mujoco_viewer
+	url = https://github.com/rohanpsingh/mujoco-python-viewer
+	ignore = dirty
+[submodule "third_party/phc"]
+	path = third_party/phc
+	url = https://github.com/ZhengyiLuo/PHC
+	ignore = dirty
+[submodule "packages/zed_proxy"]
+	path = packages/zed_proxy
+	url = https://github.com/GDDG08/ZED-Proxy
+	ignore = dirty
+[submodule "packages/unitree_cpp"]
+	path = packages/unitree_cpp
+	url = https://github.com/GDDG08/unitree_cpp
+	ignore = dirty

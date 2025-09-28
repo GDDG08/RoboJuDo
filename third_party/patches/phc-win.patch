@@ -1,0 +1,24 @@
+diff --git a/phc/utils/motion_lib_real.py b/phc/utils/motion_lib_real.py
+index e954ad4..2219d09 100644
+--- a/phc/utils/motion_lib_real.py
++++ b/phc/utils/motion_lib_real.py
+@@ -9,6 +9,7 @@ from phc.utils import torch_utils
+ import joblib
+ import torch
+ import torch.multiprocessing as mp
++from torch.multiprocessing import Queue
+ # import multiprocessing as mp
+ import copy
+ import gc
+@@ -124,8 +125,9 @@ class MotionLibReal(MotionLibBase):
+         torch.set_num_threads(1)
+         
+ 
+-        manager = mp.Manager()
+-        queue = manager.Queue()
++        # manager = mp.Manager()
++        # queue = manager.Queue()
++        queue = Queue()
+         num_jobs = min(mp.cpu_count(), 64)
+ 
+         if num_jobs <= 16 or not self.multi_thread:

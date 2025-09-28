@@ -1,0 +1,185 @@
+diff --git a/phc/utils/motion_lib_real.py b/phc/utils/motion_lib_real.py
+index e954ad4..7326f0a 100644
+--- a/phc/utils/motion_lib_real.py
++++ b/phc/utils/motion_lib_real.py
+@@ -12,11 +12,11 @@ import torch.multiprocessing as mp
+ # import multiprocessing as mp
+ import copy
+ import gc
+-from smpl_sim.smpllib.smpl_parser import (
+-    SMPL_Parser,
+-    SMPLH_Parser,
+-    SMPLX_Parser,
+-)
++# from smpl_sim.smpllib.smpl_parser import (
++#     SMPL_Parser,
++#     SMPLH_Parser,
++#     SMPLX_Parser,
++# )
+ from scipy.spatial.transform import Rotation as sRot
+ import random
+ from phc.utils.flags import flags
+@@ -404,7 +404,7 @@ class MotionLibReal(MotionLibBase):
+             
+             if not target_heading is None:
+                 start_root_rot = sRot.from_rotvec(pose_aa[0, 0])
+-                heading_inv_rot = sRot.from_quat(torch_utils.calc_heading_quat_inv(torch.from_numpy(start_root_rot.as_quat()[None, ])))
++                heading_inv_rot = sRot.from_quat(torch_utils.calc_heading_quat_inv(torch.from_numpy(start_root_rot.as_quat()[None, ])), scalar_first = True)
+                 heading_delta = sRot.from_quat(target_heading) * heading_inv_rot 
+                 pose_aa[:, 0] = torch.tensor((heading_delta * sRot.from_rotvec(pose_aa[:, 0])).as_rotvec())
+ 
+diff --git a/phc/utils/torch_humanoid_batch.py b/phc/utils/torch_humanoid_batch.py
+index 5299545..2ed3478 100644
+--- a/phc/utils/torch_humanoid_batch.py
++++ b/phc/utils/torch_humanoid_batch.py
+@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation as sRot
+ import xml.etree.ElementTree as ETree
+ from easydict import EasyDict
+ import scipy.ndimage.filters as filters
+-import smpl_sim.poselib.core.rotation3d as pRot
++import poselib.poselib.core.rotation3d as pRot
+ from lxml.etree import XMLParser, parse, ElementTree, Element, SubElement
+ from lxml import etree
+ from io import BytesIO
+@@ -24,9 +24,9 @@ from collections import OrderedDict
+ import hydra
+ from omegaconf import DictConfig
+ from tqdm import tqdm
+-from stl import mesh
++# from stl import mesh
+ import logging
+-import open3d as o3d
++# import open3d as o3d
+ 
+ # Configure logging
+ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+@@ -306,12 +306,12 @@ class Humanoid_Batch:
+         mesh_parent_dict = {}
+         
+         
+-        for mesh_file_node in tqdm(all_mesh):
+-            mesh_name = mesh_file_node.attrib["name"]
+-            mesh_file = mesh_file_node.attrib["file"]
+-            mesh_full_file = osp.join(mesh_base, mesh_file)
+-            mesh_obj = o3d.io.read_triangle_mesh(mesh_full_file)
+-            mesh_dict[mesh_name] = mesh_obj
++        # for mesh_file_node in tqdm(all_mesh):
++        #     mesh_name = mesh_file_node.attrib["name"]
++        #     mesh_file = mesh_file_node.attrib["file"]
++        #     mesh_full_file = osp.join(mesh_base, mesh_file)
++        #     mesh_obj = o3d.io.read_triangle_mesh(mesh_full_file)
++        #     mesh_dict[mesh_name] = mesh_obj
+ 
+         geom_transform = {}
+         
+diff --git a/phc/utils/torch_utils.py b/phc/utils/torch_utils.py
+index 3523660..b142eba 100644
+--- a/phc/utils/torch_utils.py
++++ b/phc/utils/torch_utils.py
+@@ -28,12 +28,80 @@
+ 
+ import numpy as np
+ 
+-from isaacgym.torch_utils import *
++# from isaacgym.torch_utils import *
+ import torch
+ from torch import nn
+ import phc.utils.pytorch3d_transforms as ptr
+ import torch.nn.functional as F
+ 
++# The following functions are copied from Isaac Lab to avoid dependency on it.
++# ---- Start of functions from Isaac Lab -----
++@torch.jit.script
++def quat_from_euler_xyz(roll: torch.Tensor, pitch: torch.Tensor, yaw: torch.Tensor) -> torch.Tensor:
++    """Convert rotations given as Euler angles in radians to Quaternions.
++
++    Note:
++        The euler angles are assumed in XYZ convention.
++
++    Args:
++        roll: Rotation around x-axis (in radians). Shape is (N,).
++        pitch: Rotation around y-axis (in radians). Shape is (N,).
++        yaw: Rotation around z-axis (in radians). Shape is (N,).
++
++    Returns:
++        The quaternion in (w, x, y, z). Shape is (N, 4).
++    """
++    cy = torch.cos(yaw * 0.5)
++    sy = torch.sin(yaw * 0.5)
++    cr = torch.cos(roll * 0.5)
++    sr = torch.sin(roll * 0.5)
++    cp = torch.cos(pitch * 0.5)
++    sp = torch.sin(pitch * 0.5)
++    # compute quaternion
++    qw = cy * cr * cp + sy * sr * sp
++    qx = cy * sr * cp - sy * cr * sp
++    qy = cy * cr * sp + sy * sr * cp
++    qz = sy * cr * cp - cy * sr * sp
++
++    return torch.stack([qw, qx, qy, qz], dim=-1)
++
++
++@torch.jit.script
++def normalize(x: torch.Tensor, eps: float = 1e-9) -> torch.Tensor:
++    """Normalizes a given input tensor to unit length.
++
++    Args:
++        x: Input tensor of shape (N, dims).
++        eps: A small value to avoid division by zero. Defaults to 1e-9.
++
++    Returns:
++        Normalized tensor of shape (N, dims).
++    """
++    return x / x.norm(p=2, dim=-1).clamp(min=eps, max=None).unsqueeze(-1)
++
++
++@torch.jit.script
++def quat_from_angle_axis(angle: torch.Tensor, axis: torch.Tensor) -> torch.Tensor:
++    """Convert rotations given as angle-axis to quaternions.
++
++    Args:
++        angle: The angle turned anti-clockwise in radians around the vector's direction. Shape is (N,).
++        axis: The axis of rotation. Shape is (N, 3).
++
++    Returns:
++        The quaternion in (w, x, y, z). Shape is (N, 4).
++    """
++    theta = (angle / 2).unsqueeze(-1)
++    xyz = normalize(axis) * theta.sin()
++    w = theta.cos()
++    return normalize(torch.cat([w, xyz], dim=-1))
++
++
++@torch.jit.script
++def normalize_angle(x):
++    return torch.atan2(torch.sin(x), torch.cos(x))
++
++# ---- End of functions from Isaac Lab -----
+ 
+ def project_to_norm(x, norm=5, z_type = "sphere"):
+     if z_type == "sphere":
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..165a75b
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,19 @@
++[build-system]
++requires = ["setuptools>=61.0"]
++build-backend = "setuptools.build_meta"
++
++[project]
++name = "phc"
++version = "1.0.0"
++description = ""
++license = { text = "BSD-3-Clause" }
++dependencies = [
++    "lxml",
++    "hydra-core",
++]
++
++[project.optional-dependencies]
++dev = []
++
++[tool.setuptools.packages.find]
++where = ["."]
