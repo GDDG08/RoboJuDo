@@ -135,12 +135,10 @@ class G1BeyondMimicDoF(DoFConfig):
 class G1BeyondMimicPolicyCfg(BeyondMimicPolicyCfg):
     robot: str = "g1"
 
-    # policy_name: str = "2025-08-17_15-35-10_dance1_subject2"
-    # policy_name: str = "2025-08-17_00-22-08_dance2_subject3"
-    # policy_name: str = "2025-08-18_23-35-27_dance2_subject2_wose"
-    # policy_name: str = "2025-09-03_21-00-31_Box"
-    # policy_name: str = "2025-09-04_15-42-30_Box_wose"
-    policy_name: str = "2025-09-25_04-02-35_dance1_subject2_wose"
+    # policy_name: str = "Jump_wose"
+    policy_name: str = "Dance_wose"
+    # policy_name: str = "Violin"
+    # policy_name: str = "Waltz"
 
     obs_dof: DoFConfig = G1BeyondMimicDoF()
     action_dof: DoFConfig = obs_dof

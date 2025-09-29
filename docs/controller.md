@@ -6,18 +6,23 @@
 
 `Controller` is the base class for all controllers. It defines the interface that all controllers must implement.
 
+---
 We provide the following controllers:
 - [JoystickCtrl](#controller--joystickctrl)
 - [UnitreeCtrl](#controller--unitreectrl)
 - [KeyboardCtrl](#controller--keyboardctrl)
 - [MotionCtrl](#controller--motionctrl)
+- [BeyondmimicCtrl](#controller--beyondmimicctrl)
+
 ## [Controller](#controller) > [JoystickCtrl](#controller--joystickctrl)
 
-`JoystickCtrl` is the controller that controls the robot using the xbox joystick. It is a subclass of `Controller` and implements the interface defined in `Controller`.
+`JoystickCtrl` is the controller that controls the robot using the joystick. It is a subclass of `Controller` and implements the interface defined in `Controller`.
 
 script:
   - [joystick_ctrl.py](../robojudo/controller/joystick_ctrl.py)
-  
+
+Example data of Xbox Joystick with Linear Triggers:
+
 `ctrl_data`:`dict`, the control data.
   - `axes`: `dict[str, float]`:
     - `LeftX`: left axes x value. Range: [-1, 1]
@@ -33,32 +38,33 @@ script:
       - `timestamp`: the time when the button event occurs. `float`
       - `type`: the type of the button event.
 
-  **example**:
-```
+`command`: `list` of commands when `triggers` or `triggers_extra` are detected.
+
+**example**:
+```json
 {'axes': {'LeftX': 0.0, 'LeftY': 0.0, 'RightX': 0.0, 'RightY': 0.0, 'LT': 0.0, 'RT': 0.0}, 'button_event': [{'type': 'button', 'name': 'A', 'pressed': False, 'timestamp': 1758886189.6776087}]}
 ```
 
-`command`: `list`, only generate when you set `triggers_extra`, otherwise, the command will be `[]`.
-
+You can set Hotkeys in JoystickCtrlCfg:
 ```python
 JoystickCtrlCfg(
     triggers_extra={
         "RB+Down": "[POLICY_SWITCH],0",
-        "RB+Left": "[POLICY_SWITCH],1",
-        "RB+Up": "[POLICY_SWITCH],2",
-        "RB+Right": "[POLICY_SWITCH],3",
+        "LB+RB+A": "COMBO_TEST",
     }
 ),
 ```
 when you press the `RB+Down` button, the command will be `["[POLICY_SWITCH],0"]`.
 
-💡For more details, please refer to the [joystick.py](../robojudo/controller/utils/joystick.py)
+💡We have joystick mapping config for different platforms and Joystick types. 
+
+> For KEY name and more details, please refer to the [joystick.py](../robojudo/controller/utils/joystick.py)
 
 ## [Controller](#controller) > [UnitreeCtrl](#controller--unitreectrl)
 
 `UnitreeCtrl` is the controller that controls the robot using the `UnitreeG1` controller. It is a subclass of `Controller` and implements the interface defined in `Controller`. 
 
-⚠️ If you don't launch a G1 robot, `UnitreeCtrl` won't work.
+> ⚠️ If you don't connect to a Unitree robot, `UnitreeCtrl` won't work.
 
 script:
 - [unitree_ctrl.py](../robojudo/controller/unitree_ctrl.py)
@@ -79,24 +85,25 @@ script:
    - `pressed`: the value of the input. `bool`. `True` for `press`, `False` for `release`.
    - `timestamp`: the time when the input event occurs. `float`
 
-  **example**:
+`command`: `list`, only generate when you set `triggers`, otherwise, the command will be `[]`.
+
+**example**:
 ```
 [{'type': 'keyboard', 'name': 's', 'pressed': True, 'timestamp': 1758888074.643119}]
 ```
 
-`command`: `list`, only generate when you set `triggers`, otherwise, the command will be `[]`.
-
+Similarly, you can set command triggers:
 ```python
 KeyboardCtrl(
   cfg_ctrl=KeyboardCtrlCfg(
-      triggers={
+      triggers_extra={
           "Key.space": "[TEST]",
           "\x01": "[CTRL_A]",
       }
     )
   )
 ```
-when you press the `Ctrl+A` button, the command will be `[TEST]`.
+when you press the `Ctrl+A` button, the command will be `[CTRL_A]`.
 
 💡For more details, please refer to the [keyboard.py](../robojudo/controller/utils/keyboard.py)
 
@@ -126,7 +133,7 @@ G1MotionCtrlCfg(
 )
 ```
 
-Your motion file should be placed in the `assets/resources/motions/g1/phc_29` directory.
+Your motion file should be placed in the `assets/resources/motions/{robot}/phc` directory.
 
 ## [Controller](#controller) > [BeyondMimicCtrl](#controller--beyondmimicctrl)
 
@@ -136,6 +143,6 @@ You don't need to master `BeyondMimicCtrl`. It is just designed for `BeyondMimic
 
 ```python
 G1BeyondmimicCtrlCfg(
-  motion_name="Box", # only when policy: use_motion_from_model=False
+  motion_name="dance1_subject2", # only when policy: use_motion_from_model=False
 )
 ```

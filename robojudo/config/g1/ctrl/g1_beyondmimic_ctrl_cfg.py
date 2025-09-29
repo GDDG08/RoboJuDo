@@ -4,11 +4,7 @@ from robojudo.controller.ctrl_cfgs import BeyondMimicCtrlCfg
 class G1BeyondmimicCtrlCfg(BeyondMimicCtrlCfg):
     # ==== motion config ====
     robot: str = "g1"  # default as only supported g1
-    # motion_name: "dance1_subject2"
-    # motion_name: "dance2_subject3"
-    # motion_name: "sprint1_subject2"
-    # motion_name: "dance2_subject2"
-    motion_name: str = "Box"
+    motion_name: str = "dance1_subject2"
 
     motion_cfg: BeyondMimicCtrlCfg.MotionCommandCfg = BeyondMimicCtrlCfg.MotionCommandCfg(
         anchor_body_name="torso_link",

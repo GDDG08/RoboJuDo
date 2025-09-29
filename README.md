@@ -12,13 +12,16 @@
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Ubuntu-green" alt="platform"/>
   <!-- Multi-Robot -->
   <img src="https://img.shields.io/badge/robot-UnitreeG1%20%7C%20UnitreeH1%20%7C%20FFTAIgr1-orange" alt="multi-robot"/>
+  <!-- Pre Commit -->
+  <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white]" alt="pre-commit"/>
   <!-- License -->
   <a href="https://creativecommons.org/licenses/by-nc/4.0/">
     <img src="https://img.shields.io/badge/License-CC--BY--NC--4.0-lightgrey.svg" alt="license"/>
   </a>
 </p>
-
 <img src="docs/images/header-demo.gif" width="80%" alt="demo"/>
+<br>
+<br>
 </div>
 
 
@@ -97,14 +100,14 @@ Currently, **Robojuco** supports the following policy–environment combinations
 
 | Policy | Unitree G1 | Unitree H1 | FFTAI gr1t1 | Ref | Doc | Feature & Note |
 |:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|:-------:|
-| Unitree Official | 🖥️ 🤖 | 🖥️ 🤖 | - | [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreeDoc](./docs/policy.md/#policy--unitreepolicy)
-| Human2Humanoid | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ | [H2H](https://github.com/LeCAR-Lab/human2humanoid) | [H2HDoc](./docs/policy.md/#policy--h2hstudentpolicy)
-| Smooth | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ 🤖⚠️ | [Smooth](https://github.com/zixuan417/smooth-humanoid-locomotion) | - |
-| AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AMODoc](./docs/policy.md/#policy--amopolicy)
-| GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) | -
-| HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugDoc](./docs/policy.md/#policy--hugwbcpolicy)
-| BeyondMimic | 🖥️ 🤖 | - | - | [beyondmimic](https://github.com/han-xudong/beyondmimic) | [BeyondMimicDoc](./docs/policy.md/#policy--beyondmimicpolicy)
-| ... | ... | ... | ... | ... | ... |
+| Unitree Official | 🖥️ 🤖 | 🖥️ 🤖 | - | [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreeDoc](./docs/policy.md/#policy--unitreepolicy)|  |
+| Human2Humanoid | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ | [H2H](https://github.com/LeCAR-Lab/human2humanoid) | [H2HDoc](./docs/policy.md/#policy--h2hstudentpolicy) | Need PHC submodule |
+| Smooth | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ 🤖⚠️ | [Smooth](https://github.com/zixuan417/smooth-humanoid-locomotion) |  |
+| AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AMODoc](./docs/policy.md/#policy--amopolicy) |  |
+| GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) |  |  |
+| HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugDoc](./docs/policy.md/#policy--hugwbcpolicy) |  |
+| BeyondMimic | 🖥️ 🤖 | - | - | [beyondmimic](https://github.com/han-xudong/beyondmimic) | [BeyondMimicDoc](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
+| ... | ... | ... | ... | ... | ... | ... |
 </div>
 🖥️ means policy is ready for simulation, while 🤖 means policy has been tested on real robot.
 
@@ -149,7 +152,7 @@ RoboJuDo is a **plug-and-play framework**. After a minimal default installation,
 
 If you plan to control a real robot, install the corresponding SDK.
 
-For example, see [unitree_setup.md](docs/setup.md) for Unitree robots.
+For example, see [unitree_setup.md](docs/unitree_setup.md) for Unitree robots.
 
 ---
 
@@ -212,29 +215,22 @@ You can control the simulation environment using the Keyboard:
 ## Run RoboJuDo on Real Robot 🤖
 
 ### Alert & Disclaimer ⚠️⚠️⚠️
-Before deployment, you'd better first purchase accident insurance to cover any potential incidents that may occur during real-world operation. In our tests, all policies showed ⚠️**violent motions**⚠️ when losing balance. Always verify that the emergency stop button **A** (e.g., on an Xbox controller) works properly.
+> Before deployment, you'd better first purchase accident insurance to cover any potential incidents that may occur during real-world operation. Policies could cause ⚠️**violent motions**⚠️ when losing balance. Always verify that the emergency stop button (e.g., **A** for default config) works properly.
 
-Unless you have strong sim-to-real expertise and rigorous safety measures, **do not run these models on real robots**. They are provided for research only, and we disclaim any responsibility for harm, loss, or malfunction.
+> Unless you have strong sim-to-real expertise and rigorous safety measures, **DO NOT run these models on real robots**. They are provided for research only, and we disclaim any responsibility for harm, loss, or malfunction.
 
-### Setup
+### Robot Setup
 
-Follow our [setup guide](./docs/setup.md) to set up the environment and config on the computer or robot.
+Follow our [setup guide](./docs/unitree_setup.md) to set up the robot sdk on your computer or robot.
 
+### Start RoboJuDo
 
-### Running on the Robot
-Refer [official guide](https://support.unitree.com/home/zh/G1_developer/Operational_guidance) to place the robot in a safe posture.
+Open [`g1_cfg.py`](robojudo/config/g1/g1_cfg.py) and modify the `g1_real` config.
 
-Then, if you use `unitree_python_sdk`, open [`robojudo\config\g1\g1_cfg.py`](robojudo/config/g1/g1_cfg.py) and modify the `env_type` as `"UnitreeEnv"`:
+Edit the `env_type` and `net_if` according to your robot sdk setup.
 
 ```python
-@cfg_registry.register
 class g1_real(g1):
-    """
-    Unitree G1 robot, Unitree Policy, Sim2Real.
-    To extend the sim2sim config to sim2real, just need to change the env to real env.
-    """
-
-    # env: G1DummyEnvCfg = G1DummyEnvCfg()
     env: G1RealEnvCfg = G1RealEnvCfg(
         env_type="UnitreeEnv",  # For unitree_sdk2py
         # env_type="UnitreeCppEnv", # For unitree_cpp, check README for more details
@@ -246,22 +242,21 @@ class g1_real(g1):
     )
 ```
 
+Refer to [official guide](https://github.com/unitreerobotics/unitree_rl_gym/blob/main/deploy/deploy_real/README.md#startup-process) to prepare and start the robot.
+
 Then start the pipeline on the real robot:
 
 ```bash
 python scripts/run_pipeline.py --config=g1_real
 ```
 
-If you use `unitree_cpp_sdk`, open [`robojudo\config\g1\g1_cfg.py`](robojudo/config/g1/g1_cfg.py) and modify the `env_type` as `"UnitreeCppEnv"` and run:
-
-```bash
-python scripts/run_pipeline.py --config=g1_real
-```
+Your robot should move into default pos. 
+**During the 1000 step of initialization, put your robot on the ground.**
 
 You can control the real robot using the Unitree controller:
+- `A` button: Emergency stop. The robot immediately switches to damping mode. Be careful.
 - `left axes` move forward/backward/let/right
 - `right axes` turn left/right
-- `A` button: Emergency stop. The robot immediately switches to damping mode. Be careful.
 
 ## Deploy more Policies
 
@@ -302,7 +297,7 @@ For Unitree Policy:
 
 For BeyondMimic Policy:
 - `shift+<` start the motion play
-- `shift+<` start the motion play
+- `shift+>` pause the motion play
 - `q` button: reset robot.
 
 <!-- 
@@ -346,7 +341,7 @@ If you find our work useful, please cite our GitHub repository:
 @misc{RoboJuDo,
   author = {Hans Zhuang, Dsixy},
   title = {A plug-and-play deploy framework for robots. Just deploy, just do.},
-  url = {https://github.com/GDDG08/RL-Deploy-Sim-Real},
+  url = {https://github.com/GDDG08/RoboJuDo},
   year = {2025}
 }
 ```

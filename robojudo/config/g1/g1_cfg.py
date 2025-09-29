@@ -149,10 +149,13 @@ class g1_beyondmimic_with_ctrl(RlPipelineCfg):
     env: G1MujocoEnvCfg = G1MujocoEnvCfg()
     ctrl: list[KeyboardCtrlCfg | G1BeyondmimicCtrlCfg] = [
         KeyboardCtrlCfg(),
-        G1BeyondmimicCtrlCfg(),
+        G1BeyondmimicCtrlCfg(
+            motion_name="dance1_subject2",  # you can put your own motion file in assets/motions/g1
+        ),
     ]
 
     policy: G1BeyondMimicPolicyCfg = G1BeyondMimicPolicyCfg(
+        policy_name="Dance_wose",
         use_motion_from_model=False,  # use motion from BeyondmimicCtrl instead of the onnx
     )
 
