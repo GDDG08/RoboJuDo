@@ -15,17 +15,10 @@ class G1RealEnvCfg(G1EnvCfg, UnitreeEnvCfg):
         robot="g1",
         msg_type="hg",
         hand_type="NONE",
-        lowcmd_topic="rt/lowcmd",
-        lowstate_topic="rt/lowstate",
         enable_odometry=True,
     )
 
-    odometry_type: Literal["DUMMY", "UNITREE", "ZED"] = "UNITREE"
-    # zed_cfg: ZedOdometryCfg | None = ZedOdometryCfg(
-    #     server_ip="192.168.123.167",
-    #     pos_offset=[0.0, 0.0, 0.9],
-    #     zero_align=True,
-    # )
+    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"
 
     joint2motor_idx: list[int] | None = None  # list(range(0, 29))
 
@@ -39,12 +32,10 @@ class G1WithHandRealEnvCfg(G1EnvCfg, UnitreeEnvCfg):
         robot="g1",
         msg_type="hg",
         hand_type="Dex-3",
-        lowcmd_topic="rt/lowcmd",
-        lowstate_topic="rt/lowstate",
         enable_odometry=True,
     )
 
-    odometry_type: Literal["DUMMY", "UNITREE", "ZED"] = "UNITREE"
+    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"
     # zed_cfg: ZedOdometryCfg | None = ZedOdometryCfg(
     #     server_ip="192.168.123.167",
     #     pos_offset=[0.0, 0.0, 0.9],

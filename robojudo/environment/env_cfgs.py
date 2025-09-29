@@ -43,7 +43,7 @@ class RobotEnvCfg(EnvCfg):
     # ====== ENV CONFIGURATION ======
     act: bool = True
 
-    odometry_type: Literal["DUMMY", "ZED"] = "DUMMY"
+    odometry_type: Literal["NONE", "DUMMY", "ZED"] = "NONE"
     zed_cfg: ZedOdometryCfg | None = None
     """ZED odometry config, if odometry_type is "ZED", this must be set"""
 
@@ -85,7 +85,7 @@ class UnitreeEnvCfg(RobotEnvCfg):
 
     unitree: UnitreeCfg
 
-    odometry_type: Literal["DUMMY", "UNITREE", "ZED"] = "DUMMY"  # pyright: ignore[reportIncompatibleVariableOverride]
+    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     joint2motor_idx: list[int] | None = None
     """Mapping from env dof to motor index, None for direct mapping"""

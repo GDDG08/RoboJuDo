@@ -15,11 +15,9 @@ class H1RealEnvCfg(H1EnvCfg, UnitreeEnvCfg):
         robot="h1",
         msg_type="go",
         hand_type="Inspire",
-        lowcmd_topic="rt/lowcmd",
-        lowstate_topic="rt/lowstate",
     )
 
-    odometry_type: Literal["DUMMY", "UNITREE", "ZED"] = "DUMMY"
+    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"
     # zed_cfg: ZedOdometryCfg | None = ZedOdometryCfg(
     #     server_ip="192.168.123.167",
     #     pos_offset=[0.0, 0.0, 0.9],
