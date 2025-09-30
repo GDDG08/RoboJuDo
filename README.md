@@ -58,6 +58,7 @@ Our framework highlights:
 - [x] [2025.09] RoboJuDo Opensource 🎉
 - [ ] Release code for **HugWBC**
 - [ ] Release code for **GMT**
+- [ ] Add support for **ASAP**
 - [ ] Upcoming policies...
 
  
@@ -78,13 +79,13 @@ This repository provides a deployment framework for humanoid robots, supporting 
 We decouple the **controller**, **environment**, and **policy**, making it easy for users to add their own policies or environments.  
 Experiment configurations can be organized through config files.
 
-The main modules of **Robojuco** consist of:
+The main modules of **RoboJuDo** consist of:
 
 - 🎮 **Controller**: A collection of control signals. It receives external inputs (e.g., joystick, keyboard, motion sequences) and forwards them as `ctrl_data` to the pipeline.  
 - 🤖 **Environment**: The execution environment (e.g., Mujoco, real robot). It processes actions provided by the policy and sends real-time sensor data as `env_data` to the pipeline.  
 - 🌐 **Policy**: A trained control policy (from various wbc & locomotion works). It generates actions based on information from both the environment and the controller.
 
-Currently, **Robojuco** supports the following policy–environment combinations:
+Currently, **RoboJuDo** supports the following policy–environment combinations:
 
 
 <div align="center">
@@ -100,13 +101,13 @@ Currently, **Robojuco** supports the following policy–environment combinations
 
 | Policy | Unitree G1 | Unitree H1 | FFTAI gr1t1 | Ref | Doc | Feature & Note |
 |:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|:-------:|
-| Unitree Official | 🖥️ 🤖 | 🖥️ 🤖 | - | [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreeDoc](./docs/policy.md/#policy--unitreepolicy)|  |
-| Human2Humanoid | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ | [H2H](https://github.com/LeCAR-Lab/human2humanoid) | [H2HDoc](./docs/policy.md/#policy--h2hstudentpolicy) | Need PHC submodule |
+| Unitree Official | 🖥️ 🤖 | 🖥️ 🤖 | - | [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreePolicy](./docs/policy.md/#policy--unitreepolicy)|  |
+| Human2Humanoid | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ | [H2H](https://github.com/LeCAR-Lab/human2humanoid) | [H2HStudentPolicy](./docs/policy.md/#policy--h2hstudentpolicy) | Need PHC submodule |
 | Smooth | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ 🤖⚠️ | [Smooth](https://github.com/zixuan417/smooth-humanoid-locomotion) |  |
-| AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AMODoc](./docs/policy.md/#policy--amopolicy) |  |
+| AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AmoPolicy](./docs/policy.md/#policy--amopolicy) |  |
 | GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) |  |  |
-| HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugDoc](./docs/policy.md/#policy--hugwbcpolicy) |  |
-| BeyondMimic | 🖥️ 🤖 | - | - | [beyondmimic](https://github.com/han-xudong/beyondmimic) | [BeyondMimicDoc](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
+| HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugWbcPolicy](./docs/policy.md/#policy--hugwbcpolicy) |  |
+| BeyondMimic | 🖥️ 🤖 | - | - | [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 🖥️ means policy is ready for simulation, while 🤖 means policy has been tested on real robot.
@@ -181,7 +182,7 @@ In the following, we use the deployment on G1 as an example.
 
 ## Run RoboJuDo on Simulation
 
-Begin your jouney with unitree g1 sim2sim.
+Begin your journey with unitree g1 sim2sim.
 
 > A Xbox controller is needed for control.
 
@@ -192,7 +193,7 @@ python scripts/run_pipeline.py
 
 You can control the motivation using any Xbox controller:
 
-- `left axes` move forward/backward/let/right
+- `left axes` move forward/backward/lfet/right
 - `right axes` turn left/right
 
 <!-- Or a keyboard:
