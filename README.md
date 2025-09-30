@@ -58,7 +58,10 @@ Our framework highlights:
 - [x] [2025.09] RoboJuDo Opensource 🎉
 - [ ] Release code for **HugWBC**
 - [ ] Release code for **GMT**
-- [ ] Add support for **ASAP**
+- [x] [2025.10] Add support for **ASAP** ✨
+  - [x] Implement `deepmimic` and `locomotion`, check [AsapPolicy](./docs/policy.md/#policy--asappolicy)!
+  - [x] Preserve original keyboard and joystick mappings
+  - [ ] Add policy-switch pipeline with interpolation
 - [ ] Upcoming policies...
 
  
@@ -108,6 +111,7 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) |  |  |
 | HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugWbcPolicy](./docs/policy.md/#policy--hugwbcpolicy) |  |
 | BeyondMimic | 🖥️ 🤖 | - | - | [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
+| ASAP | 🖥️ | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 🖥️ means policy is ready for simulation, while 🤖 means policy has been tested on real robot.

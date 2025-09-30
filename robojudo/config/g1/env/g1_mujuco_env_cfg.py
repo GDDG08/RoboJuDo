@@ -7,7 +7,6 @@ class G1MujocoEnvCfg(G1EnvCfg, MujocoEnvCfg):
     env_type: str = MujocoEnvCfg.model_fields["env_type"].default
     is_sim: bool = MujocoEnvCfg.model_fields["is_sim"].default
     # ====== ENV CONFIGURATION ======
-    wrist_idx: list[int] = [17, 22]  # TODO: remove
 
     update_with_fk: bool = True
 

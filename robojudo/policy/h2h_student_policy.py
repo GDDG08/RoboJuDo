@@ -84,7 +84,7 @@ class H2HStudentPolicy(Policy):
             ref_vel_in_task_obs=True,
         )
 
-        history_to_be_append = np.array(self.trajectories).flatten()
+        history_to_be_append = np.array(self.history_buf).flatten()
         obs = np.concatenate(
             [
                 dof_pos if not self.use_dof_pos_offset else dof_pos_offset,
@@ -108,7 +108,7 @@ class H2HStudentPolicy(Policy):
             ],
             axis=0,
         )
-        self.trajectories.appendleft(obs_a)
+        self.history_buf.appendleft(obs_a)
 
         extras = {
             "ref_rb_pos_subset": ref_rb_pos_subset,

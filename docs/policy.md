@@ -92,7 +92,7 @@ script: [hugwbc_policy.py](../robojudo/policy/hugwbc_policy.py)
 
 ## [Policy](#policy) > [BeyondMimicPolicy](#policy--beyondmimicpolicy)
 
-`BeyondMimicPolicy` is the policy that controls the robot using the [BeyondMimic](https://github.com/han-xudong/beyondmimic). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`BeyondMimicPolicy` is the policy that controls the robot using the [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking). It is a subclass of `Policy` and implements the interface defined in `Policy`.
 
 We support both `G1FlatEnvCfg` and `G1FlatWoStateEstimationEnvCfg`. 
 For motion source, you could use the motion inside onnx policy, or use `BeyondmimicCtrl` with npz files.
@@ -108,4 +108,31 @@ script: [beyondmimic_policy.py](../robojudo/policy/beyondmimic_policy.py)
 
  You can refer to `g1_beyondmimic` and `g1_beyondmimic_with_ctrl` in [g1_cfg.py](../robojudo/config/g1/g1_cfg.py) for details.
 
+## [Policy](#policy) > [AsapPolicy](#policy--asappolicy)
+
+`AsapPolicy` is the policy that controls the robot using the [ASAP](https://github.com/LeCAR-Lab/ASAP). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+
+RoboJuDo support both `deepmimic` and `decoupled_locomotion` of the official repo, implemeted as `AsapPolicy` and `AsapLocoPolicy`.
+
+We fully reproduced the original repository, including keyboard and joystick mapping:
+
+- press `i` to make the robot the initial position
+- press `o` to emergence stop the robot
+- press `=` to switch between tapping and walking for the locomotion policy
+- press `w/a/s/d` to control the linear velocity
+- press `q/e` to control the angular velocity
+- press `z` to set all commands to zero
+
+script: [asap_policy.py](../robojudo/policy/asap_policy.py)
+
+> For your convenience, `CR7_level1` checkpoint is included, you can ran sim2sim with `g1_asap` config in [g1_asap_cfg.py](../robojudo/config/g1/g1_asap_cfg.py).
+
+You can add more models to `assets/models/g1/asap/mimic`. Any model in the official repo and [RoboMimic_Deploy](https://github.com/ccrpRepo/RoboMimic_Deploy) should work.
+
+This example highlights the advantages of RoboJudo:
+- Modular code & config with easy implementation and strong readability
+- Flexible policy switching, with interpolation support.
+- Convenient external controller processing
+
+You can refer to `g1_asap` and `g1_asap_loco` in [g1_cfg.py](../robojudo/config/g1/g1_asap_cfg.py) for test and details.
 

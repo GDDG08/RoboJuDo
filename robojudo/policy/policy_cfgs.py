@@ -26,7 +26,6 @@ class PolicyCfg(Config):
     action_clip: float | None = None  # clip action to [-action_clip, action_clip]
     action_beta: float = 1.0  # action smoothing factor
 
-    # TODO: move to policy config
     # history settings
     history_length: int = 0  # number of history observations to use
 
@@ -211,3 +210,99 @@ class BeyondMimicPolicyCfg(PolicyCfg):
                 raise ValueError("use_modelmeta_config must be True when use_motion_from_model")
 
         return self
+
+
+class AsapPolicyCfg(PolicyCfg):
+    policy_type: str = "AsapPolicy"
+    disable_autoload: bool = True
+
+    # ======= MOTION POLICY CONFIGURATION =======
+    policy_name: str
+    relative_path: str
+
+    motion_length_s: float
+    start_upper_body_dof_pos: list[float] | None = None  # reserved for interpolation loco to mimic
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/asap/mimic/{self.policy_name}/{self.relative_path}"
+        return policy_file.as_posix()
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    class ObsScalesCfg(Config):
+        # base_lin_vel: float
+        base_ang_vel: float
+        projected_gravity: float
+        # command_lin_vel: float
+        # command_ang_vel: float
+        # command_stand: float
+        # command_base_height: float
+        # ref_upper_dof_pos: float
+        dof_pos: float
+        dof_vel: float
+        history: float
+        actions: float
+        # phase_time: float
+        ref_motion_phase: float
+        # sin_phase: float
+        # cos_phase: float
+
+    action_scale: float = 0.25
+    action_clip: float | None = 100.0
+    obs_scales: ObsScalesCfg
+
+    history_length: int = 4  # number of history observations to use
+    history_obs_dims: dict[str, int] = {}
+    """
+    Note: the history obs item should be aligned with code of policy
+    IMPORTANT: the key order should be SORTED when concat history obs!!!
+    """
+
+    USE_HISTORY: bool
+    NUM_UPPER_BODY_JOINTS: int
+    # GAIT_PERIOD: float
+
+
+class AsapLocoPolicyCfg(PolicyCfg):
+    policy_type: str = "AsapLocoPolicy"
+    disable_autoload: bool = True
+
+    # ======= MOTION POLICY CONFIGURATION =======
+    policy_name: str
+    relative_path: str
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/asap/dec_loco/{self.policy_name}/{self.relative_path}"
+        return policy_file.as_posix()
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    class ObsScalesCfg(Config):
+        # base_lin_vel: float
+        base_ang_vel: float
+        projected_gravity: float
+        command_lin_vel: float
+        command_ang_vel: float
+        command_stand: float
+        command_base_height: float
+        ref_upper_dof_pos: float
+        dof_pos: float
+        dof_vel: float
+        history: float
+        actions: float
+        # phase_time: float
+        ref_motion_phase: float
+        sin_phase: float
+        cos_phase: float
+
+    action_scale: float = 0.25
+    action_clip: float | None = 100.0
+    obs_scales: ObsScalesCfg
+
+    history_length: int = 4  # number of history observations to use
+    history_obs_dims: dict[str, int] = {}
+    """Note: the history obs item should be aligned with code of policy"""
+
+    USE_HISTORY: bool
+    NUM_UPPER_BODY_JOINTS: int
+    GAIT_PERIOD: float

@@ -47,11 +47,11 @@ class Policy(ABC):
         self.history_length = self.cfg_policy.history_length
         self.history_obs_size = self.cfg_policy.history_obs_size
 
-    def _init_history(self, default_history):
-        logger.debug(f"Initializing history buffer as {self.history_length} x {self.history_obs_size}")
-        self.trajectories = deque(maxlen=self.history_length)
+    def _init_history(self, default_history: np.ndarray | torch.Tensor | list):
+        logger.debug(f"Initializing history buffer as {self.history_length} x {len(default_history)}")
+        self.history_buf = deque(maxlen=self.history_length)
         for _ in range(self.history_length):
-            self.trajectories.append(default_history)
+            self.history_buf.append(default_history)
 
     @abstractmethod
     def reset(self):
@@ -73,7 +73,7 @@ class Policy(ABC):
         actions = actions_tensor.numpy().squeeze()
         actions = (1 - self.action_beta) * self.last_action + self.action_beta * actions
 
-        self.last_action = actions.copy()
+        self.last_action = actions.copy()  # TODO
 
         processed_actions = actions
         if self.action_clip is not None:

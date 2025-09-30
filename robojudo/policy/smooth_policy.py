@@ -75,11 +75,11 @@ class SmoothPolicy(Policy):
         )
 
         assert obs_prop.shape[0] == self.history_obs_size
-        obs_hist = np.array(self.trajectories).flatten()
+        obs_hist = np.array(self.history_buf).flatten()
 
         priv_latent = np.zeros(self.n_priv_latent)
 
-        self.trajectories.append(obs_prop)
+        self.history_buf.append(obs_prop)
 
         obs = np.concatenate((obs_prop, priv_latent, obs_hist))
 
