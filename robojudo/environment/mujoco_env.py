@@ -37,6 +37,7 @@ class MujocoEnv(Environment):
             width=1200,
             height=900,
             hide_menus=True,
+            diable_key_callbacks=True,
         )
         self.viewer.cam.distance = 3.0
         # self.viewer._paused = True

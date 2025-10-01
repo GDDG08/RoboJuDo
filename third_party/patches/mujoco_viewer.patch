@@ -1,8 +1,25 @@
 diff --git a/mujoco_viewer/mujoco_viewer.py b/mujoco_viewer/mujoco_viewer.py
-index a86a1d6..3fd2a32 100644
+index a86a1d6..d1bcc61 100644
 --- a/mujoco_viewer/mujoco_viewer.py
 +++ b/mujoco_viewer/mujoco_viewer.py
-@@ -70,7 +70,7 @@ class MujocoViewer(Callbacks):
+@@ -18,7 +18,8 @@ class MujocoViewer(Callbacks):
+             title="mujoco-python-viewer",
+             width=None,
+             height=None,
+-            hide_menus=False):
++            hide_menus=False,
++            diable_key_callbacks=False):
+         super().__init__(hide_menus)
+ 
+         self.model = model
+@@ -65,12 +66,13 @@ class MujocoViewer(Callbacks):
+             glfw.set_mouse_button_callback(
+                 self.window, self._mouse_button_callback)
+             glfw.set_scroll_callback(self.window, self._scroll_callback)
+-            glfw.set_key_callback(self.window, self._key_callback)
++            if not diable_key_callbacks:
++                glfw.set_key_callback(self.window, self._key_callback)
+ 
          # create options, camera, scene, context
          self.vopt = mujoco.MjvOption()
          self.cam = mujoco.MjvCamera()
@@ -11,7 +28,7 @@ index a86a1d6..3fd2a32 100644
          self.pert = mujoco.MjvPerturb()
  
          self.ctx = mujoco.MjrContext(
-@@ -132,7 +132,7 @@ class MujocoViewer(Callbacks):
+@@ -132,7 +134,7 @@ class MujocoViewer(Callbacks):
  
          # overlay, markers
          self._overlay = {}
@@ -20,7 +37,7 @@ index a86a1d6..3fd2a32 100644
  
      def add_line_to_fig(self, line_name, fig_idx=0):
          assert isinstance(line_name, str), \
-@@ -180,7 +180,55 @@ class MujocoViewer(Callbacks):
+@@ -180,7 +182,55 @@ class MujocoViewer(Callbacks):
          fig.linedata[line_idx][1] = line_data
  
      def add_marker(self, **marker_params):
@@ -28,7 +45,7 @@ index a86a1d6..3fd2a32 100644
 +        m_id = marker_params.get('id', 0)
 +        m_key = f'marker_{m_id}'
 +        self._markers_dict[m_key] = marker_params
-+    
++
 +    def draw_or_update_marker(self, ns: str, m_id: int,  **marker_params):
 +        if self.scn.ngeom >= self.scn.maxgeom:
 +            raise RuntimeError(
@@ -39,7 +56,7 @@ index a86a1d6..3fd2a32 100644
 +        if m_key not in self.marker_geoms:
 +            self.marker_geoms[m_key] = self.scn.geoms[self.scn.ngeom]
 +            self.scn.ngeom += 1
-+        
++
 +        m_geom = self.marker_geoms[m_key]
 +        m_geom.dataid = -1
 +        m_geom.objtype = mujoco.mjtObj.mjOBJ_UNKNOWN
@@ -77,7 +94,7 @@ index a86a1d6..3fd2a32 100644
  
      def _add_marker_to_scene(self, marker):
          if self.scn.ngeom >= self.scn.maxgeom:
-@@ -194,10 +242,10 @@ class MujocoViewer(Callbacks):
+@@ -194,10 +244,10 @@ class MujocoViewer(Callbacks):
          g.objtype = mujoco.mjtObj.mjOBJ_UNKNOWN
          g.objid = -1
          g.category = mujoco.mjtCatBit.mjCAT_DECOR
@@ -92,7 +109,7 @@ index a86a1d6..3fd2a32 100644
          g.emission = 0
          g.specular = 0.5
          g.shininess = 0.5
-@@ -208,6 +256,8 @@ class MujocoViewer(Callbacks):
+@@ -208,6 +258,8 @@ class MujocoViewer(Callbacks):
          g.rgba[:] = np.ones(4)
  
          for key, value in marker.items():
@@ -101,7 +118,7 @@ index a86a1d6..3fd2a32 100644
              if isinstance(value, (int, float, mujoco._enums.mjtGeom)):
                  setattr(g, key, value)
              elif isinstance(value, (tuple, list, np.ndarray)):
-@@ -378,6 +428,7 @@ class MujocoViewer(Callbacks):
+@@ -378,6 +430,7 @@ class MujocoViewer(Callbacks):
              return np.flipud(img)
  
      def render(self):
@@ -109,7 +126,7 @@ index a86a1d6..3fd2a32 100644
          if self.render_mode == 'offscreen':
              raise NotImplementedError(
                  "Use 'read_pixels()' for 'offscreen' mode.")
-@@ -409,7 +460,7 @@ class MujocoViewer(Callbacks):
+@@ -409,7 +462,7 @@ class MujocoViewer(Callbacks):
                      mujoco.mjtCatBit.mjCAT_ALL.value,
                      self.scn)
                  # marker items
@@ -118,7 +135,7 @@ index a86a1d6..3fd2a32 100644
                      self._add_marker_to_scene(marker)
                  # render
                  mujoco.mjr_render(self.viewport, self.scn, self.ctx)
-@@ -467,9 +518,6 @@ class MujocoViewer(Callbacks):
+@@ -467,9 +520,6 @@ class MujocoViewer(Callbacks):
                  update()
                  self._loop_count -= 1
  
