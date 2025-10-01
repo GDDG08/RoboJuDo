@@ -30,7 +30,7 @@ def merge_dof_cfgs(base_cfg: DoFConfig, override_cfg: DoFConfig) -> DoFConfig:
         value_raw = getattr(merged_cfg, key)
         value_override_fitted = dof_adapter.fit(value_override, dim=0, template=value_raw).tolist()
         setattr(merged_cfg, key, value_override_fitted)
-        logger.info(f"[DoF] override {key} with {value_override_fitted}")
+        logger.debug(f"[DoF] override {key} with {value_override_fitted}")
     return merged_cfg
 
 
