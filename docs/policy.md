@@ -134,5 +134,5 @@ This example highlights the advantages of RoboJudo:
 - Flexible policy switching, with interpolation support.
 - Convenient external controller processing
 
-You can refer to `g1_asap` and `g1_asap_loco` in [g1_cfg.py](../robojudo/config/g1/g1_asap_cfg.py) for test and details.
+You can refer to `g1_asap` and `g1_asap_loco` in [g1_asap_cfg.py](../robojudo/config/g1/g1_asap_cfg.py) for test and details.
 

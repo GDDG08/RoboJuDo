@@ -38,9 +38,7 @@ def main():
     pipeline = pipeline_class(cfg=cfg)
 
     if not cfg.env.is_sim:
-        logger.warning("prepare_init")
         pipeline.prepare()
-        logger.warning("prepare_done")
 
     while True:
         time_start = time.time()

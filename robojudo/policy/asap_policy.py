@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 import time
 
 import numpy as np
@@ -9,17 +8,10 @@ import onnxruntime as ort
 from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import AsapLocoPolicyCfg, AsapPolicyCfg
+from robojudo.utils.progress import ProgressBar
 from robojudo.utils.util_func import command_remap, quat_rotate_inverse_np
 
 logger = logging.getLogger(__name__)
-
-
-def vis_process(name, alpha):
-    bar_length = 30  # Adjust bar length as needed
-    filled_length = int(bar_length * alpha)
-    bar = "█" * filled_length + "-" * (bar_length - filled_length)
-    sys.stdout.write(f"\r{name} Progress: |{bar}| {alpha:.2%}")
-    sys.stdout.flush()
 
 
 @policy_registry.register
@@ -56,10 +48,17 @@ class AsapPolicy(Policy):
 
     def reset(self):
         self.timestep: float = 0
+        self.pbar = ProgressBar(f"ASAP {self.cfg_policy.policy_name}", self.motion_length_s)
         self.play_speed: float = 1.0
 
     def post_step_callback(self, commands: list[str] | None = None):
-        self.timestep += 1 * self.play_speed
+        self.pbar.set(self.timestep * self.dt)
+        phase = self._get_frame_encoding()
+        if phase >= 1.0:
+            # self.reset()
+            self.flag_motion_done = True
+        else:
+            self.timestep += 1 * self.play_speed
 
         # TODO: If current mimic policy is done, switch to locomotion policy
         if self._get_frame_encoding() >= 1.0:
@@ -80,7 +79,6 @@ class AsapPolicy(Policy):
         # the frame encoding is maped to 0-1
         phase = (self.timestep * self.dt) / self.motion_length_s
         # print("phase", phase)
-        vis_process("Mimic", phase)
         return phase
 
     def _get_obs_history(self):
@@ -208,7 +206,6 @@ class AsapLocoPolicy(Policy):
     def _get_obs_phase_time(self):
         cur_time = time.time() * self.stand_command[0]
         phase_time = cur_time % self.gait_period / self.gait_period
-        vis_process("Loco", phase_time)
         return np.array([phase_time])
 
     def _get_obs_history(self):

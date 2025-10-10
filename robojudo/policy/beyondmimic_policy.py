@@ -7,6 +7,7 @@ from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import BeyondMimicPolicyCfg
 from robojudo.tools.dof import DoFConfig
+from robojudo.utils.progress import ProgressBar
 from robojudo.utils.rotation import TransformAlignment
 from robojudo.utils.util_func import matrix_from_quat, subtract_frame_transforms
 
@@ -106,12 +107,17 @@ class BeyondMimicPolicy(Policy):
 
     def reset(self):
         self.timestep: float = self.cfg_policy.start_timestep
+        if self.use_motion_from_model:
+            self.pbar = ProgressBar(f"Beyondmimic {self.cfg_policy.policy_name}", self.max_timestep)
+        else:
+            self.pbar = None
         self.play_speed: float = 0.0
         self._prepare_policy()
 
     def post_step_callback(self, commands: list[str] | None = None):
         self.timestep += 1 * self.play_speed
-        print(self.timestep)
+        if self.pbar:
+            self.pbar.set(self.timestep)
 
         if 0 < self.max_timestep <= self.timestep:
             self.play_speed = 0.0

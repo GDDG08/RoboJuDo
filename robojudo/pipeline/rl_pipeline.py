@@ -11,6 +11,7 @@ from robojudo.pipeline import Pipeline, pipeline_registry
 from robojudo.pipeline.pipeline_cfgs import RlPipelineCfg
 from robojudo.policy import Policy
 from robojudo.tools.dof import DoFAdapter
+from robojudo.utils.progress import ProgressBar
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,8 @@ class RlPipeline(Pipeline):
 
         traj_len = 1000
         last_step_time = time.time()
+        logger.warning("prepare_init")
+        pbar = ProgressBar("Prepare", traj_len)
 
         for t in range(traj_len):
             current_motor_angle = np.array(self.env.dof_pos)
@@ -143,13 +146,16 @@ class RlPipeline(Pipeline):
             else:
                 logger.error("Warning: frame drop")
             last_step_time = time.time()
-            print(t)
+            # print(t)
+            pbar.update()
 
             if t == 0.9 * traj_len:
                 logger.info(f"{'=' * 10} RESET ZERO POSITION {'=' * 10}")
                 self.reset()
 
         time.sleep(0.01)
+        pbar.close()
+        logger.warning("prepare_done")
 
 
 if __name__ == "__main__":

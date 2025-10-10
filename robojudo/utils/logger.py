@@ -1,8 +1,20 @@
 import logging
-import sys
 from pathlib import Path
 
 import colorlog
+from tqdm import tqdm
+
+
+class TqdmLoggingHandler(logging.Handler):
+    """Logging handler that works well with tqdm progress bars."""
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 
 def setup_logger(name: str = "robojudo") -> logging.Logger:
@@ -25,13 +37,16 @@ def setup_logger(name: str = "robojudo") -> logging.Logger:
         },
     )
 
-    console_handler = logging.StreamHandler(sys.stdout)
+    # console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = TqdmLoggingHandler()
+    console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(color_formatter)
     logger.addHandler(console_handler)
 
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
     file_handler = logging.FileHandler(log_dir / f"{name}.log", encoding="utf-8")
+    file_handler.setLevel(logging.DEBUG)
     file_formatter = logging.Formatter(
         "%(asctime)s.%(msecs)03d [%(levelname)s] [%(name)s] %(message)s", "%m-%d %H:%M:%S"
     )

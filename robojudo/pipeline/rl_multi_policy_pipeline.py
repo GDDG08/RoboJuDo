@@ -177,6 +177,7 @@ class RlMultiPolicyPipeline(RlPipeline):
 
         # Handle policy switch after step to avoid mid-step change
         if policy_switch_target is not None:
+            self.policy.reset()  # TODO: reset then warm up
             self.policy.set_policy(policy_switch_target)
             self.env.reset()
             self.env.update_dof_cfg(override_cfg=self.policy.get_policy_inst().cfg_action_dof)

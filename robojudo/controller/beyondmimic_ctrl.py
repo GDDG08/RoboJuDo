@@ -8,6 +8,7 @@ import numpy as np
 from robojudo.controller import Controller, ctrl_registry
 from robojudo.controller.ctrl_cfgs import BeyondMimicCtrlCfg
 from robojudo.environment import Environment
+from robojudo.utils.progress import ProgressBar
 from robojudo.utils.rotation import TransformAlignment
 
 
@@ -118,6 +119,7 @@ class BeyondMimicCtrl(Controller):
 
     def reset(self):
         self.timestep = 0
+        self.pbar = ProgressBar(f"BeyondmimicCtrl {self.cfg_ctrl.motion_name}", self.motion.time_step_total)
 
         # align the robot to the motion's starting pose
         init2anchor_pos = self.motion.body_pos_w[0, self.motion_anchor_body_index].copy()
@@ -126,6 +128,7 @@ class BeyondMimicCtrl(Controller):
         self.motion_init_align.set_base(quat=init2anchor_quat, pos=init2anchor_pos)
 
     def post_step_callback(self, commands: list[str] | None = None):
+        self.pbar.set(self.timestep)
         if self.timestep < self.motion.time_step_total - 1:
             if self.playing:
                 self.timestep += 1
