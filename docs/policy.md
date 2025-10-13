@@ -114,7 +114,7 @@ script: [beyondmimic_policy.py](../robojudo/policy/beyondmimic_policy.py)
 
 RoboJuDo support both `deepmimic` and `decoupled_locomotion` of the official repo, implemeted as `AsapPolicy` and `AsapLocoPolicy`.
 
-We fully reproduced the original repository, including keyboard mapping:
+We fully reproduced the original repository, including keyboard and joystick mapping:
 - `i` to make the robot the initial position
 - `o` to emergence stop the robot
 
@@ -129,6 +129,16 @@ for policy switch:
 - `]` to switch to LocoMotion
 - `;` toggle next mimic policy
 - `'` toggle prev mimic policy
+
+or with joystick:
+- `Left` to switch between tapping and walking for the locomotion policy
+- `Up/Down` to control the height
+- `left axes` to control the linear velocity
+- `right axes` to control the angular velocity
+- `Select/Back` to switch to LocoMotion
+- `Start` to switch to MotionMimic
+- `R1/RB` to toggle next mimic policy
+- `L1/LB` to toggle prev mimic policy
 
 script: [asap_policy.py](../robojudo/policy/asap_policy.py)
 

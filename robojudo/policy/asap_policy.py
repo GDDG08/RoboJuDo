@@ -323,7 +323,7 @@ class AsapLocoPolicy(Policy):
         if (ref_dof_pos := ctrl_data.get("ref_dof_pos", None)) is not None:
             self.ref_upper_dof_pos = ref_dof_pos.copy()[-self.num_upper_dofs :]
         for key in ctrl_data.keys():
-            if key in ["JoystickCtrl", "UnitreeCtrk"]:
+            if key in ["JoystickCtrl", "UnitreeCtrl"]:
                 axes = ctrl_data[key]["axes"]
                 lx, ly, rx, _ry = axes["LeftX"], axes["LeftY"], axes["RightX"], axes["RightY"]
 
