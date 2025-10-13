@@ -51,7 +51,7 @@ class MujocoEnv(Environment):
 
         self.update()  # get initial state
 
-    def reset(self, init_qpos=None):
+    def reborn(self, init_qpos=None):
         if init_qpos is not None:
             self.data.qpos[0:7] = init_qpos
             self.data.qvel[:] = 0.0
@@ -60,6 +60,7 @@ class MujocoEnv(Environment):
             mujoco.mj_resetDataKeyframe(self.model, self.data, 0)  # pyright: ignore[reportAttributeAccessIssue]
         mujoco.mj_forward(self.model, self.data)  # pyright: ignore[reportAttributeAccessIssue]
 
+    def reset(self):
         if self.born_place_align:  # TODO: merge
             self.born_place_align = False  # disable during reset
             self.update()

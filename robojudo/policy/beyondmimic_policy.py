@@ -111,7 +111,8 @@ class BeyondMimicPolicy(Policy):
             self.pbar = ProgressBar(f"Beyondmimic {self.cfg_policy.policy_name}", self.max_timestep)
         else:
             self.pbar = None
-        self.play_speed: float = 0.0
+        self.play_speed: float = 1.0
+        self.flag_motion_done = False
         self._prepare_policy()
 
     def post_step_callback(self, commands: list[str] | None = None):
@@ -121,6 +122,8 @@ class BeyondMimicPolicy(Policy):
 
         if 0 < self.max_timestep <= self.timestep:
             self.play_speed = 0.0
+            self.flag_motion_done = True
+
         for command in commands or []:
             match command:
                 case "[MOTION_RESET]":
@@ -134,6 +137,7 @@ class BeyondMimicPolicy(Policy):
         if not self.use_motion_from_model:
             assert "BeyondMimicCtrl" in ctrl_data, "BeyondMimicCtrl not found in ctrl_data"
             command = ctrl_data.get("BeyondMimicCtrl")
+            self.command = command
             # print(command.time_steps[0])
             return (
                 command.command,
@@ -215,6 +219,7 @@ class BeyondMimicPolicy(Policy):
             "anchor_quat_w": anchor_quat_w,
             "command": command,
             "hand_pose": hand_pose,
+            "CALLBACK": ["[MOTION_DONE]"] if self.flag_motion_done else [],
         }
         return obs, extras
 
@@ -241,14 +246,25 @@ class BeyondMimicPolicy(Policy):
 
         scaled_actions = actions * self.action_scales
 
-        self.command = {
-            "time_step": self.timestep,
-            "joint_pos": np.asarray(ort_outputs[1]).squeeze(),
-            "joint_vel": np.asarray(ort_outputs[2]).squeeze(),
-            "body_pos_w": np.asarray(ort_outputs[3]).squeeze(),
-            "body_quat_w": np.asarray(ort_outputs[4]).squeeze(),  # as [w, x, y, z]
-        }
+        if self.use_motion_from_model:
+            self.command = {
+                "time_step": self.timestep,
+                "joint_pos": np.asarray(ort_outputs[1]).squeeze(),
+                "joint_vel": np.asarray(ort_outputs[2]).squeeze(),
+                "body_pos_w": np.asarray(ort_outputs[3]).squeeze(),
+                "body_quat_w": np.asarray(ort_outputs[4]).squeeze(),  # as [w, x, y, z]
+            }
         return scaled_actions
+
+    def get_init_dof_pos(self) -> np.ndarray:
+        """
+        Return first frame of the reference motion.
+        """
+        if self.command is not None:
+            joint_pos = self.command["joint_pos"]
+            return joint_pos.copy()
+        else:
+            return self.default_dof_pos.copy()
 
     def debug_viz(self, visualizer: MujocoVisualizer, env_data, ctrl_data, extras):
         robot_anchor_pos_w = extras["robot_anchor_pos_w"]

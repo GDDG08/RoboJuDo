@@ -52,6 +52,7 @@ class Environment(ABC):
         if override_cfg is not None:
             dof_config = merge_dof_cfgs(self.cfg_env.dof, override_cfg)
 
+        self.dof_cfg = dof_config
         self.joint_names = dof_config.joint_names
         self.num_dofs = dof_config.num_dofs
         self.default_pos = np.asarray(dof_config.default_pos)

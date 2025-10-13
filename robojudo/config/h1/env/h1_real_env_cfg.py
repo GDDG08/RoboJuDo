@@ -6,15 +6,21 @@ from robojudo.environment.env_cfgs import UnitreeEnvCfg
 from .h1_env_cfg import H1EnvCfg
 
 
+class H1UnitreeCfg(UnitreeEnvCfg.UnitreeCfg):
+    robot: Literal["h1", "g1"] = "h1"
+
+    msg_type: Literal["hg", "go"] = "go"
+    hand_type: Literal["Dex-3", "Inspire", "NONE"] = "NONE"
+
+    enable_odometry: bool = False
+
+
 class H1RealEnvCfg(H1EnvCfg, UnitreeEnvCfg):
     # env_type: str = UnitreeEnvCfg.model_fields["env_type"].default
     env_type: str = "UnitreeEnv"
     # ====== ENV CONFIGURATION ======
-    unitree: UnitreeEnvCfg.UnitreeCfg = UnitreeEnvCfg.UnitreeCfg(
+    unitree: UnitreeEnvCfg.UnitreeCfg = H1UnitreeCfg(
         net_if="eno2",
-        robot="h1",
-        msg_type="go",
-        hand_type="Inspire",
     )
 
     odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"

@@ -5,7 +5,7 @@ import torch
 
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import AMOPolicyCfg
-from robojudo.utils.util_func import command_remap
+from robojudo.utils.util_func import command_remap, quatToEuler
 
 
 @policy_registry.register
@@ -31,19 +31,10 @@ class AMOPolicy(Policy):
                             node.removeAttribute("value")
                             node.s_("value", "cpu")
 
-        self.last_action = np.zeros(self.num_actions, dtype=np.float32)
-        self.action_scale = 0.25
-        self.arm_action = np.zeros(8)  # self.default_pos[15:]
-        self.prev_arm_action = self.default_pos[15:]
-        self.arm_blend = 0.0
-        self.toggle_arm = False
-
         self.scales_ang_vel = self.cfg_policy.obs_scales.ang_vel
         self.scales_dof_vel = self.cfg_policy.obs_scales.dof_vel
         self.control_dt = 1.0 / self.cfg_policy.freq
         self.commands_map = self.cfg_policy.commands_map
-
-        self._init_history(np.zeros(self.history_obs_size))
 
         # TODO: move robot specific to cfg
         self.nj = 23
@@ -53,8 +44,10 @@ class AMOPolicy(Policy):
         self.extra_history_len = 25
         self._n_demo_dof = 8
 
+        self.arm_action = self.default_dof_pos[-self._n_demo_dof :]
+
         self.demo_obs_template = np.zeros((8 + 3 + 3 + 3,))
-        self.demo_obs_template[: self._n_demo_dof] = self.default_pos[15:]
+        self.demo_obs_template[: self._n_demo_dof] = self.default_dof_pos[-self._n_demo_dof :]
         self.demo_obs_template[self._n_demo_dof + 6 : self._n_demo_dof + 9] = 0.75
 
         self.target_yaw = 0.0
@@ -95,8 +88,10 @@ class AMOPolicy(Policy):
         self.timestep += 1
 
     def _get_commands(self, ctrl_data):
-        commands = self.cmd.copy()
+        # if (ref_dof_pos := ctrl_data.get("ref_dof_pos", None)) is not None:
+        #     self.arm_action = ref_dof_pos.copy()[-self._n_demo_dof :]
 
+        commands = self.cmd.copy()
         for key in ctrl_data.keys():
             if key in ["JoystickCtrl", "UnitreeCtrl"]:
                 axes = ctrl_data[key]["axes"]
@@ -117,20 +112,25 @@ class AMOPolicy(Policy):
 
     def get_observation(self, env_data, ctrl_data):
         self.cmd = self._get_commands(ctrl_data)
-        rpy = self.quatToEuler(env_data.base_quat[[3, 0, 1, 2]])
 
+        dof_pos = env_data.dof_pos
+        dof_vel = env_data.dof_vel
+        base_quat = env_data.base_quat
+        base_ang_vel = env_data.base_ang_vel
+
+        rpy = quatToEuler(base_quat)
         self.target_yaw = self.cmd[1]
         dyaw = rpy[2] - self.target_yaw
         dyaw = np.remainder(dyaw + np.pi, 2 * np.pi) - np.pi
         if self._in_place_stand_flag:
             dyaw = 0.0
 
-        obs_dof_vel = env_data.dof_vel.copy()
+        obs_dof_vel = dof_vel.copy()
         obs_dof_vel[[4, 5, 10, 11, 13, 14]] = 0.0
 
         gait_obs = np.sin(self.gait_cycle * 2 * np.pi)
 
-        self.adapter_input = np.concatenate([np.zeros(4), env_data.dof_pos[15:]])
+        self.adapter_input = np.concatenate([np.zeros(4), dof_pos[15:]])
 
         self.adapter_input[0] = self.cmd[3]  # + 0.75
         self.adapter_input[1] = self.cmd[4]
@@ -142,14 +142,18 @@ class AMOPolicy(Policy):
         self.adapter_input = (self.adapter_input - self.input_mean) / (self.input_std + 1e-8)
         self.adapter_output = self.adapter(self.adapter_input.view(1, -1))
         self.adapter_output = self.adapter_output * self.output_std + self.output_mean
+
+        last_action_full = np.concatenate(
+            [self.last_action, (dof_pos - self.default_dof_pos)[-self._n_demo_dof :] / self.action_scale]
+        )
         obs_prop = np.concatenate(
             [
-                env_data.base_ang_vel * self.scales_ang_vel,
+                base_ang_vel * self.scales_ang_vel,
                 rpy[:2],
                 (np.sin(dyaw), np.cos(dyaw)),
-                (env_data.dof_pos - self.default_pos),
-                env_data.dof_vel * self.scales_dof_vel,
-                self.last_action,
+                (dof_pos - self.default_dof_pos),
+                dof_vel * self.scales_dof_vel,
+                last_action_full,
                 gait_obs,
                 self.adapter_output.cpu().numpy().squeeze(),
             ]
@@ -158,7 +162,7 @@ class AMOPolicy(Policy):
         obs_hist = np.array(self.proprio_history_buf).flatten()
 
         obs_demo = self.demo_obs_template.copy()
-        obs_demo[: self._n_demo_dof] = env_data.dof_pos[15:]
+        obs_demo[: self._n_demo_dof] = dof_pos[15:]
         obs_demo[self._n_demo_dof] = self.cmd[0]
         obs_demo[self._n_demo_dof + 1] = self.cmd[2]
         self._in_place_stand_flag = np.abs(self.cmd[0]) < 0.1
@@ -170,12 +174,16 @@ class AMOPolicy(Policy):
         self.proprio_history_buf.append(obs_prop)
         self.extra_history_buf.append(obs_prop)
 
-        self.dof_pos = env_data.dof_pos.copy()
+        self.gait_cycle = np.remainder(self.gait_cycle + self.control_dt * self.gait_freq, 1.0)
+        if self._in_place_stand_flag and (
+            (np.abs(self.gait_cycle[0] - 0.25) < 0.05) or (np.abs(self.gait_cycle[1] - 0.25) < 0.05)
+        ):
+            self.gait_cycle = np.array([0.25, 0.25])
+        if (not self._in_place_stand_flag) and (
+            (np.abs(self.gait_cycle[0] - 0.25) < 0.05) and (np.abs(self.gait_cycle[1] - 0.25) < 0.05)
+        ):
+            self.gait_cycle = np.array([0.25, 0.75])
         extras = {
-            "extra_hist": torch.tensor(np.array(self.extra_history_buf).flatten().copy(), dtype=torch.float)
-            .view(1, -1)
-            .to(self.device)
-            .numpy(),
             "commands": self.cmd.copy(),
         }
         return np.concatenate((obs_prop, obs_demo, obs_priv, obs_hist)), extras
@@ -191,63 +199,7 @@ class AMOPolicy(Policy):
             raw_action = self.model(obs_tensor, extra_hist).cpu().numpy().squeeze()
 
         raw_action = np.clip(raw_action, -40.0, 40.0)
-        self.last_action = np.concatenate(
-            [raw_action.copy(), (self.dof_pos - self.default_pos)[15:] / self.action_scale]
-        )
+        self.last_action = raw_action.copy()
+
         scaled_actions = raw_action * self.action_scale
-
-        if self.timestep % 300 == 0 and self.cmd[7]:
-            # self.arm_blend = 0
-            self.prev_arm_action = self.dof_pos[15:].copy()
-            # self.arm_action = self.cmd_ctrl.get_motion()
-            self.arm_action = np.random.uniform(0, 1, 8) * (np.full((8), 0.8)) + np.full((8), -0.4)
-            self.toggle_arm = True
-        elif not self.cmd[7]:
-            if self.toggle_arm:
-                self.toggle_arm = False
-                # self.arm_blend = 0
-                self.prev_arm_action = self.dof_pos[15:].copy()
-                self.arm_action = np.zeros(8)
-        pd_target = np.concatenate([scaled_actions, np.zeros(8)])  # + self.default_pos
-        pd_target[15:] = (
-            self.arm_action
-        )  # (1 - self.arm_blend) * self.prev_arm_action + self.arm_blend * self.arm_action
-        # print(pd_target[15:])
-        self.arm_blend = min(1.0, self.arm_blend + 0.01)
-
-        self.gait_cycle = np.remainder(self.gait_cycle + self.control_dt * self.gait_freq, 1.0)
-        if self._in_place_stand_flag and (
-            (np.abs(self.gait_cycle[0] - 0.25) < 0.05) or (np.abs(self.gait_cycle[1] - 0.25) < 0.05)
-        ):
-            self.gait_cycle = np.array([0.25, 0.25])
-        if (not self._in_place_stand_flag) and (
-            (np.abs(self.gait_cycle[0] - 0.25) < 0.05) and (np.abs(self.gait_cycle[1] - 0.25) < 0.05)
-        ):
-            self.gait_cycle = np.array([0.25, 0.75])
-        return pd_target
-
-    @staticmethod
-    def quatToEuler(quat):  # TODO
-        eulerVec = np.zeros(3)
-        qw = quat[0]
-        qx = quat[1]
-        qy = quat[2]
-        qz = quat[3]
-        # roll (x-axis rotation)
-        sinr_cosp = 2 * (qw * qx + qy * qz)
-        cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
-        eulerVec[0] = np.arctan2(sinr_cosp, cosr_cosp)
-
-        # pitch (y-axis rotation)
-        sinp = 2 * (qw * qy - qz * qx)
-        if np.abs(sinp) >= 1:
-            eulerVec[1] = np.copysign(np.pi / 2, sinp)  # use 90 degrees if out of range
-        else:
-            eulerVec[1] = np.arcsin(sinp)
-
-        # yaw (z-axis rotation)
-        siny_cosp = 2 * (qw * qz + qx * qy)
-        cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
-        eulerVec[2] = np.arctan2(siny_cosp, cosy_cosp)
-
-        return eulerVec
+        return scaled_actions

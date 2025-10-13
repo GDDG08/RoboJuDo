@@ -17,5 +17,5 @@ from robojudo.utils.logger import setup_logger  # noqa: E402, I001
 logger = setup_logger()
 
 # Print version info
-__version__ = "1.3.2"
+__version__ = "1.4.0"
 logger.debug(f"{'=' * 10} robojudo-{__version__} init done {'=' * 10}\n")

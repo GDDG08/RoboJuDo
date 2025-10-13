@@ -53,3 +53,12 @@ class TestFullImports(unittest.TestCase):
             self.fail("Some policies failed to import. Check the logs for details.")
         else:
             print("All policies imported successfully.")
+
+    def test_import_pipelines(self):
+        from robojudo.pipeline import pipeline_registry
+
+        flag_exception = test_registry(pipeline_registry)
+        if flag_exception:
+            self.fail("Some pipelines failed to import. Check the logs for details.")
+        else:
+            print("All pipelines imported successfully.")

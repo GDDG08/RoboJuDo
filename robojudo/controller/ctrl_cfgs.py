@@ -17,7 +17,7 @@ class KeyboardCtrlCfg(CtrlCfg):
     triggers: dict[str, str] = {
         "Key.esc": "[SHUTDOWN]",
         # "Key.tab": "[POLICY_TOGGLE]",
-        "`": "[ENV_RESET]",
+        "`": "[SIM_REBORN]",
         "<": "[MOTION_FADE_IN]",  # note: with shift
         ">": "[MOTION_FADE_OUT]",  # note: with shift
         "|": "[MOTION_RESET]",  # note: with shift

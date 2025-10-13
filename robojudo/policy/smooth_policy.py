@@ -35,7 +35,7 @@ class SmoothPolicy(Policy):
         return phase
 
     def _get_commands(self, ctrl_data):
-        commands = np.zeros(3)
+        commands = np.array(self.commands_map)[:, 1].copy()  # default commands
 
         for key in ctrl_data.keys():
             if key in ["JoystickCtrl", "UnitreeCtrl"]:

@@ -56,12 +56,13 @@ Our framework highlights:
 - [x] [2025.06] Integrated Unitree C++ SDK
 - [x] [2025.08] Add support for beyondmimic
 - [x] [2025.09] RoboJuDo Opensource 🎉
-- [ ] Release code for **HugWBC**
-- [ ] Release code for **GMT**
 - [x] [2025.10] Add support for **ASAP** ✨
   - [x] Implement `deepmimic` and `locomotion`, check [AsapPolicy](./docs/policy.md/#policy--asappolicy)!
   - [x] Preserve original keyboard and joystick mappings
-  - [ ] Add policy-switch pipeline with interpolation
+  - [x] Support for **KungfuBot**
+- [x] Add policy-switch pipeline with interpolation, check [LocoMimic Example](#loco-mimic-policy-switch-with-interpolation)!
+- [ ] Release code for **HugWBC**
+- [ ] Release code for **GMT**
 - [ ] Upcoming policies...
 
  
@@ -110,8 +111,8 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AmoPolicy](./docs/policy.md/#policy--amopolicy) |  |
 | GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) |  |  |
 | HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugWbcPolicy](./docs/policy.md/#policy--hugwbcpolicy) |  |
-| BeyondMimic | 🖥️ 🤖 | - | - | [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
-| ASAP | 🖥️ | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
+| **BeyondMimic** | 🖥️ 🤖 | - | - | [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
+| **ASAP**<br>**KungfuBot** | 🖥️ 🤖 | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP)<br>[PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 🖥️ means policy is ready for simulation, while 🤖 means policy has been tested on real robot.
@@ -133,6 +134,7 @@ Robot onboard PCs are also supported.
 
 ```bash
 git clone https://github.com/GDDG08/RoboJuDo.git
+cd RoboJuDo/
 # Example using conda
 conda create -n robojudo python=3.11 -y
 conda activate robojudo
@@ -173,8 +175,8 @@ Edit [submodule_cfg.yaml](./submodule_cfg.yaml) to select modules, by setting `i
 # Install all required modules
 python submodule_install.py
 
-# Or add extra modules with args
-# python submodule_install.py mujoco_viewer
+# Or specify modules to install with args
+# python submodule_install.py unitree_cpp
 ```
 
 # 📖Quick Start
@@ -208,7 +210,7 @@ You can control the motivation using any Xbox controller:
 <!-- For cooler policy, run:
 
 ```bash
-python scripts/run_pipeline.py --config=g1_beyondmimic
+python scripts/run_pipeline.py -c g1_beyondmimic
 ```
 You can control the simulation environment using the Keyboard:
 
@@ -252,11 +254,11 @@ Refer to [official guide](https://github.com/unitreerobotics/unitree_rl_gym/blob
 Then start the pipeline on the real robot:
 
 ```bash
-python scripts/run_pipeline.py --config=g1_real
+python scripts/run_pipeline.py -c g1_real
 ```
 
 Your robot should move into default pos. 
-**During the 1000 step of initialization, put your robot on the ground.**
+**During the preparation, put your robot on the ground.**
 
 You can control the real robot using the Unitree controller:
 - `A` button: Emergency stop. The robot immediately switches to damping mode. Be careful.
@@ -265,16 +267,27 @@ You can control the real robot using the Unitree controller:
 
 ## Deploy more Policies
 
-You can try to deploy different policies on different environments.
+💡Now you’re familiar with RoboJuDo’s config design, it’s time to experience the **amazing variety of policies**!
+
+### BeyondMimic & ASAP
+
+Try the out of box experience of **BeyondMimic** and **ASAP**:
+
+```bash
+python scripts/run_pipeline.py -c g1_beyondmimic
+python scripts/run_pipeline.py -c g1_asap
+```
+
+check documentation [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) and [AsapPolicy](./docs/policy.md/#policy--asappolicy) for more details.
 
 ### Multi-Policy Switch
 `g1_switch` config in [g1_cfg.py](robojudo/config/g1/g1_cfg.py) is equipped with Multi-Policy Pipeline.
 
 ```bash
-python scripts/run_pipeline.py --config=g1_switch
+python scripts/run_pipeline.py -c g1_switch
 ```
 
-Xbox Controller or Unitree Controller:
+Xbox Controller:
 
 - `left axes` move forward/backward/left/right
 - `right axes(for/back)` stand higher/squat
@@ -284,45 +297,35 @@ Switch between Unitree Policy and BeyondMimic Policy:
 - `RB + Dpad[Down]` switch to Unitree Policy
 - `RB + Dpad[Up]` switch to AMO Policy
 
-### Multi-Policy Switch with BeyondMimic
+### Loco-Mimic Policy Switch with Interpolation
 
+For deploying **Motion Mimic Policies** with **Locomotion** as backup, we built [LocoMimicPipeline](robojudo/pipeline/rl_loco_mimic_pipeline.py) for multi-policy switching with interpolation, 
+
+Check `g1_locomimic` config in [g1_cfg.py](robojudo/config/g1/g1_cfg.py), and more fancy locomimic configs in [g1_loco_mimic_cfg.py](robojudo/config/g1/g1_loco_mimic_cfg.py).
+
+```bash
+python scripts/run_pipeline.py -c g1_locomimic_beyondmimic
+python scripts/run_pipeline.py -c g1_locomimic_asap
 ```
-python scripts/run_pipeline.py --config=g1_switch_beyondmimic
-```
-You can control the simulation environment using the **Keyboard**:
 
-For switch:
-- `[Tab]` switch to next policy.
-<!-- - `RB + Dpad[Down]` switch to Unitree Policy
-- `RB + Dpad[Left]` switch to BeyondMimic Policy -->
+We have the same Keyboard control as ASAP:
+- `[` to switch to MotionMimic
+- `]` to switch to LocoMotion
+- `;` toggle next mimic policy
+- `'` toggle prev mimic policy
 
-For Unitree Policy:
-- `wsad` move forward/backward/left/right
-- `qe` turn left/right
+<div align="center">
+<img src="docs/images/locomimic_asap.gif" width="20%" alt="locomimic_asap"/>
+</div>
 
-For BeyondMimic Policy:
-- `shift+<` start the motion play
-- `shift+>` pause the motion play
-- `q` button: reset robot.
+### More Policies
 
-<!-- 
-### Unitree and BeyondMimic for G1
-```
-# TODO(give the code)
-```
-For emergency stop:
-- `a` button: Emergency stop. The robot immediately switches to damping mode. Be careful.
+We also provide config files for other policies, check [config_g1](robojudo/config/g1) and [config_g1](robojudo/config/h1) for more details.
 
-For switch:
-- `RB+Down` switch to Unitree Policy
-- `RB+Left` switch to BeyondMimic Policy
+In RoboJuDo, we have fully replicated ASAP’s Sim2Real workflow, including all motions. 
 
-For Unitree Policy:
-- `left axes` move forward/backward/left/right
-- `right axes` turn left/right
+Please refer to `g1_locomimic_asap_full` in [g1_loco_mimic_cfg.py](robojudo/config/g1/g1_loco_mimic_cfg.py). This highlights the modular advantages of our framework.
 
-For BeyondMimic Policy:
-- None -->
 
 # 🧩Develop and Contribute
 

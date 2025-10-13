@@ -134,11 +134,32 @@ class G1AmoDoF(DoFConfig):
     ]
 
 
+class G1AmoLowerDoF(G1AmoDoF):
+    _subset = True
+    _subset_joint_names: list[str] | None = [
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint",
+        "waist_yaw_joint",
+        "waist_roll_joint",
+        "waist_pitch_joint",
+    ]
+
+
 class G1AmoPolicyCfg(AMOPolicyCfg):
     robot: str = "g1"
 
     obs_dof: DoFConfig = G1AmoDoF()
-    action_dof: DoFConfig = obs_dof
+    action_dof: DoFConfig = G1AmoLowerDoF()
 
     commands_map: list[list[float]] = [
         [-1.0, 0.0, 1.0],

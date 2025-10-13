@@ -114,20 +114,27 @@ script: [beyondmimic_policy.py](../robojudo/policy/beyondmimic_policy.py)
 
 RoboJuDo support both `deepmimic` and `decoupled_locomotion` of the official repo, implemeted as `AsapPolicy` and `AsapLocoPolicy`.
 
-We fully reproduced the original repository, including keyboard and joystick mapping:
+We fully reproduced the original repository, including keyboard mapping:
+- `i` to make the robot the initial position
+- `o` to emergence stop the robot
 
-- press `i` to make the robot the initial position
-- press `o` to emergence stop the robot
-- press `=` to switch between tapping and walking for the locomotion policy
-- press `w/a/s/d` to control the linear velocity
-- press `q/e` to control the angular velocity
-- press `z` to set all commands to zero
+for locomotion policy:
+- `=` to switch between tapping and walking for the locomotion policy
+- `w/a/s/d` to control the linear velocity
+- `q/e` to control the angular velocity
+- `z` to set all commands to zero
+
+for policy switch:
+- `[` to switch to MotionMimic
+- `]` to switch to LocoMotion
+- `;` toggle next mimic policy
+- `'` toggle prev mimic policy
 
 script: [asap_policy.py](../robojudo/policy/asap_policy.py)
 
 > For your convenience, `CR7_level1` checkpoint is included, you can ran sim2sim with `g1_asap` config in [g1_asap_cfg.py](../robojudo/config/g1/g1_asap_cfg.py).
 
-You can add more models to `assets/models/g1/asap/mimic`. Any model in the official repo and [RoboMimic_Deploy](https://github.com/ccrpRepo/RoboMimic_Deploy) should work.
+You can add more models to `assets/models/g1/asap/mimic`. Any model in the official repo [ASAP-sim2real](https://github.com/LeCAR-Lab/ASAP/tree/main/sim2real/models), [PBHC](https://github.com/TeleHuman/PBHC/tree/main/example) and [RoboMimic_Deploy](https://github.com/ccrpRepo/RoboMimic_Deploy) should work.
 
 This example highlights the advantages of RoboJudo:
 - Modular code & config with easy implementation and strong readability

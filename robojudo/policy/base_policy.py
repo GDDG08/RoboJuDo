@@ -55,6 +55,7 @@ class Policy(ABC):
 
     @abstractmethod
     def reset(self):
+        # self.last_action = np.zeros(self.num_actions) # TODO
         raise NotImplementedError
 
     @abstractmethod
@@ -81,6 +82,13 @@ class Policy(ABC):
 
         processed_actions = processed_actions * self.action_scale
         return processed_actions
+
+    def get_init_dof_pos(self) -> np.ndarray:
+        """
+        Return the initial dof pos for the policy, used for robot preparation.
+        For motion policies, this should return next/first frame of the reference motion.
+        """
+        return self.default_pos.copy()
 
     def debug_viz(self, visualizer, env_data, ctrl_data, extras):
         # for debug draw

@@ -12,7 +12,7 @@ from robojudo.pipeline.pipeline_cfgs import (
 from .ctrl.h1_motion_ctrl_cfg import H1MotionCtrlCfg  # noqa: F401
 from .env.h1_dummy_env_cfg import H1DummyEnvCfg  # noqa: F401
 from .env.h1_mujuco_env_cfg import H1MujocoEnvCfg  # noqa: F401
-from .env.h1_real_env_cfg import H1RealEnvCfg  # noqa: F401
+from .env.h1_real_env_cfg import H1RealEnvCfg, H1UnitreeCfg  # noqa: F401
 from .policy.h1_h2h_policy_cfg import H1H2HPolicyCfg  # noqa: F401
 from .policy.h1_smooth_policy_cfg import H1SmoothPolicyCfg  # noqa: F401
 from .policy.h1_unitree_policy_cfg import H1UnitreePolicyCfg  # noqa: F401
@@ -48,6 +48,9 @@ class h1_real(h1):
     # env: H1DummyEnvCfg = H1DummyEnvCfg()
     env: H1RealEnvCfg = H1RealEnvCfg(
         env_type="UnitreeEnv",
+        unitree=H1UnitreeCfg(
+            net_if="eno2",  # note: change to your network interface
+        ),
         update_with_fk=True,
     )
 
@@ -78,9 +81,7 @@ class h1_switch(RlMultiPolicyPipelineCfg):
         ),
     ]
 
-    policy: H1UnitreePolicyCfg = H1UnitreePolicyCfg()
-
-    policy_extra: list[H1UnitreePolicyCfg | H1SmoothPolicyCfg] = [
+    policies: list[H1UnitreePolicyCfg | H1SmoothPolicyCfg] = [
         H1UnitreePolicyCfg(),
         H1SmoothPolicyCfg(),
     ]

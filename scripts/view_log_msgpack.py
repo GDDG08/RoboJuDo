@@ -36,6 +36,7 @@ def read_msgpack(folder_path):
 
 def view_log(folder_path):
     log_frames = read_msgpack(folder_path)
+    log_frames = log_frames[:]
 
     fk_cfg = ForwardKinematicCfg(
         xml_path=G1DummyEnvCfg.model_fields["xml"].default,
@@ -61,22 +62,24 @@ def view_log(folder_path):
             base_pos=base_pos,
             base_quat=base_quat,
         )
+        for command in ctrl_data.get("COMMANDS", []):
+            print("----->" + command)
         print(f"Step {timestep}")
         time.sleep(0.005)
 
 
 def plot_log(folder_path):
     log_frames = read_msgpack(folder_path)
-    log_frames = log_frames[1000:1500]
+    log_frames = log_frames[1000:]
 
     plot_data = [
         [0],
         [],
     ]
     for _i, log_frame in enumerate(log_frames):
-        env_data = log_frame["env_data"][()]
-        ctrl_data = log_frame["ctrl_data"][()]
-        extras = log_frame["extras"][()]
+        env_data = log_frame["env_data"]
+        ctrl_data = log_frame["ctrl_data"]
+        extras = log_frame["extras"]
         pd_target = log_frame["pd_target"]
         timestep = log_frame["timestep"]
         time_then = log_frame["time"]

@@ -235,13 +235,180 @@ class G1_23AsapDoF(G1_29AsapDoF):
     ]
 
 
+class G1_12AsapDoF(G1_29AsapDoF):
+    """robot_dof as g1_29dof_anneal_23dof, for loco lower body 12dof only"""
+
+    _subset: bool = True
+    _subset_joint_names: list[str] | None = [
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint",
+    ]
+
+
+class G1_29KongfuDoF(G1_29AsapDoF):
+    """robot_dof as g1_29dof, for KungfuBot PBHC"""
+
+    default_pos: list[float] | None = [
+        -0.1,
+        0,
+        0,
+        0.3,
+        -0.2,
+        0,
+        -0.1,
+        0,
+        0,
+        0.3,
+        -0.2,
+        0,
+        0,
+        0,
+        0,
+        0.2,
+        0.2,
+        0,
+        0.9,
+        0,
+        0,
+        0,
+        0.2,
+        -0.2,
+        0,
+        0.9,
+        0,
+        0,
+        0,
+    ]
+
+    stiffness: list[float] | None = [
+        100,
+        100,
+        100,
+        150,
+        40,
+        40,
+        100,
+        100,
+        100,
+        150,
+        40,
+        40,
+        400,
+        400,
+        400,
+        100,
+        100,
+        50,
+        50,
+        4,
+        4,
+        4,
+        100,
+        100,
+        50,
+        50,
+        4,
+        4,
+        4,
+    ]
+
+    damping: list[float] | None = [
+        2.0,
+        2.0,
+        2.0,
+        4.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        4.0,
+        2.0,
+        2.0,
+        5.0,
+        5.0,
+        5.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        0.2,
+        0.2,
+        0.2,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        0.2,
+        0.2,
+        0.2,
+    ]
+
+
+class G1_23KongfuDoF(G1_29KongfuDoF):
+    """robot_dof as 23dof, for KungfuBot PBHC"""
+
+    _subset: bool = True
+    _subset_joint_names: list[str] | None = [
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint",
+        "waist_yaw_joint",
+        "waist_roll_joint",
+        "waist_pitch_joint",
+        "left_shoulder_pitch_joint",
+        "left_shoulder_roll_joint",
+        "left_shoulder_yaw_joint",
+        "left_elbow_joint",
+        # "left_wrist_roll_joint",
+        # "left_wrist_pitch_joint",
+        # "left_wrist_yaw_joint",
+        "right_shoulder_pitch_joint",
+        "right_shoulder_roll_joint",
+        "right_shoulder_yaw_joint",
+        "right_elbow_joint",
+        # "right_wrist_roll_joint",
+        # "right_wrist_pitch_joint",
+        # "right_wrist_yaw_joint",
+    ]
+
+
 class G1AsapPolicyCfg(AsapPolicyCfg):
     robot: str = "g1"
 
+    # ======= MOTION CONFIGURATION =======
     policy_name: str = "CR7_level1"
     relative_path: str = "model_191500.onnx"
 
     motion_length_s: float = 3.967
+    # fmt: off
+    start_upper_body_dof_pos: list[float] | None = [
+        0.19964170455932617, 0.07710712403059006, -0.2882401943206787, 
+        0.21672365069389343, 0.15629297494888306, -0.5167576670646667, 0.5782126784324646,
+        0.25740593671798706, -0.2504104673862457, 0.22500675916671753, 0.5127624273300171,
+    ]
+    # fmt: on
+
+    # ======= POLICY DOF CONFIGURATION =======
 
     obs_dof: DoFConfig = G1_23AsapDoF()
     action_dof: DoFConfig = obs_dof
@@ -277,7 +444,6 @@ class G1AsapPolicyCfg(AsapPolicyCfg):
     }
 
     USE_HISTORY: bool = True
-    NUM_UPPER_BODY_JOINTS: int = 17
 
 
 class G1AsapLocoPolicyCfg(AsapLocoPolicyCfg):
@@ -287,7 +453,7 @@ class G1AsapLocoPolicyCfg(AsapLocoPolicyCfg):
     relative_path: str = "model_6600.onnx"
 
     obs_dof: DoFConfig = G1_29AsapDoF()
-    action_dof: DoFConfig = obs_dof
+    action_dof: DoFConfig = G1_12AsapDoF()
 
     # ======= POLICY SPECIFIC CONFIGURATION =======
     obs_scales: AsapLocoPolicyCfg.ObsScalesCfg = AsapLocoPolicyCfg.ObsScalesCfg(
@@ -308,10 +474,11 @@ class G1AsapLocoPolicyCfg(AsapLocoPolicyCfg):
         sin_phase=1.0,
         cos_phase=1.0,
     )
+    NUM_UPPER_BODY_JOINTS: int = 17
 
     history_length: int = 4  # from history_mimic_config
     history_obs_dims: dict[str, int] = {  # from obs_mimic_dims
-        "actions": 12,  # lower body actions
+        "actions": obs_dof.num_dofs - NUM_UPPER_BODY_JOINTS,  # lower body actions
         "base_ang_vel": 3,
         "command_ang_vel": 1,
         "command_base_height": 1,
@@ -322,10 +489,39 @@ class G1AsapLocoPolicyCfg(AsapLocoPolicyCfg):
         "dof_vel": obs_dof.num_dofs,
         # "phase_time": 1,
         "projected_gravity": 3,
-        "ref_upper_dof_pos": 17,  # upper body actions
+        "ref_upper_dof_pos": NUM_UPPER_BODY_JOINTS,  # upper body actions
         "sin_phase": 1,
     }
 
     USE_HISTORY: bool = True
-    NUM_UPPER_BODY_JOINTS: int = 17
     GAIT_PERIOD: float = 0.8  # 1.25
+
+    # ======= Default Command CONFIGURATION =======
+    # fmt: off
+    ref_upper_dof_pos_default: list[float] | None = [
+        0.0, 0.0, 0.0,
+        0.0, 0.3, 0.0, 1.0, 0.0, 0.0, 0.0, 
+        0.0, -0.3, 0.0, 1.0, 0.0, 0.0, 0.0, 
+    ]
+    # fmt: on
+    command_base_height_default: float = 0.78
+
+
+class G1KungfuBotPolicyCfg(G1AsapPolicyCfg):
+    # ======= POLICY DOF CONFIGURATION =======
+    obs_dof: DoFConfig = G1_23KongfuDoF()
+    action_dof: DoFConfig = obs_dof
+
+    # ======= MOTION CONFIGURATION =======
+    policy_name: str = "kongfu"
+    relative_path: str = "horse_squat.onnx"
+
+    motion_length_s: float = 6.67
+
+    # fmt: off
+    start_upper_body_dof_pos: list[float] | None = [
+       -5.0488499e-04,  7.1762636e-04,  2.9380890e-03,
+        2.0567834e-01,  1.9635735e-01,  4.9880091e-03,  8.9015263e-01, 
+        2.0773219e-01, -1.9702259e-01, -2.3902415e-03,  8.8817328e-01
+    ]
+    # fmt: on

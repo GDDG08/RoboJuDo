@@ -1,0 +1,6 @@
+To keep the repository size manageable, we only include a few sample models.
+Please download the others from the corresponding GitHub repositories.
+
+https://github.com/LeCAR-Lab/ASAP/tree/main/sim2real/models
+https://github.com/ccrpRepo/RoboMimic_Deploy
+https://github.com/TeleHuman/PBHC/tree/main/example

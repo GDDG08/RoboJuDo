@@ -1,123 +1,93 @@
 import logging
 
-import numpy as np
-from box import Box
-
 import robojudo.environment
 import robojudo.policy
 from robojudo.controller import CtrlManager
 from robojudo.environment import Environment
 from robojudo.pipeline import Pipeline, pipeline_registry
 from robojudo.pipeline.pipeline_cfgs import RlMultiPolicyPipelineCfg
-from robojudo.pipeline.rl_pipeline import RlPipeline
-from robojudo.policy import Policy, PolicyCfg
-from robojudo.tools.dof import DoFAdapter
+from robojudo.pipeline.rl_pipeline import PolicyWrapper, RlPipeline
+from robojudo.policy import PolicyCfg
+from robojudo.utils.step_timer import StepTimer
 
 logger = logging.getLogger(__name__)
 
 
-class PolicySwitch(Policy):
-    def __init__(self, cfg_policies: list[PolicyCfg], env_joint_names: list[str], device: str = "cpu"):
-        # Duck Policy, no init
+class PolicyManager:
+    DELAY_STEPS_SWITCH: int = 10  # steps to wait before switching policy
+
+    def __init__(
+        self,
+        cfg_policies: list[PolicyCfg],
+        env: Environment,
+        device: str = "cpu",
+    ):
+        self.env = env
         self.device = device
-        self.policies: dict[str, dict] = {}
 
+        self.policies: list[PolicyWrapper] = []
         for cfg_policy in cfg_policies:
-            policy_type = cfg_policy.policy_type
-            policy_name = policy_type
-            if hasattr(cfg_policy, "policy_name"):
-                policy_name += "@" + cfg_policy.policy_name  # type: ignore
+            policy_entry = PolicyWrapper(cfg_policy, self.env.dof_cfg, device)
+            self.policies.append(policy_entry)
 
-            while policy_name in self.policies.keys():
-                policy_name += "_new"
+        self._current_policy_id: int = 0
+        self.warmup_policy_indices = set()
 
-            policy_class: type[Policy] = getattr(robojudo.policy, policy_type)
-            policy: Policy = policy_class(
-                cfg_policy=cfg_policy,
-                device=self.device,
-            )
-            self.policies[policy_name] = {
-                "policy": policy,
-                "cfg": cfg_policy,
-                "obs_adapter": DoFAdapter(
-                    env_joint_names,
-                    policy.cfg_obs_dof.joint_names,
-                ),
-                "actions_adapter": DoFAdapter(
-                    policy.cfg_action_dof.joint_names,
-                    env_joint_names,
-                ),
-            }
-        self.current_policy_name: str
-        self.set_policy(list(self.policies.keys())[0])
+        self.timer = StepTimer()
 
-    def set_policy(self, policy_name: str):
-        if policy_name not in self.policies.keys():
-            raise ValueError(f"Policy {policy_name} not found in policies.")
-        self.current_policy_name = policy_name
-        logger.warning(f"Switched to policy: {policy_name}")
+    @property
+    def current_policy_id(self):
+        return self._current_policy_id
 
-    def get_policy_set(self) -> dict:
-        if self.current_policy_name in self.policies:
-            return self.policies[self.current_policy_name]
-        else:
-            raise ValueError(f"Current policy {self.current_policy_name} not found in policies.")
+    @property
+    def num_policies(self):
+        return len(self.policies)
 
-    def get_policy_inst(self) -> Policy:
-        return self.get_policy_set()["policy"]
+    @property
+    def policy(self) -> PolicyWrapper:
+        return self.policies[self.current_policy_id]
 
-    def get_policy_obs_adapter(self) -> DoFAdapter:
-        return self.get_policy_set()["obs_adapter"]
+    def policy_by_id(self, policy_id) -> PolicyWrapper:
+        if not (0 <= policy_id < self.num_policies):
+            raise ValueError(f"Policy id {policy_id} out of range [0, {self.num_policies})")
+        return self.policies[policy_id]
 
-    def get_policy_actions_adapter(self) -> DoFAdapter:
-        return self.get_policy_set()["actions_adapter"]
+    def set_policy(self, policy_id: int):
+        """Instantly set the policy as policy_id."""
+        if not (0 <= policy_id < self.num_policies):
+            raise ValueError(f"Policy id {policy_id} out of range [0, {self.num_policies})")
+        self.warmup_policy_indices.discard(policy_id)
 
-    def get_observation(self, env_data: Box, ctrl_data: Box):
-        observation_all = {}
-        for policy_name, policy_set in self.policies.items():
-            obs_adapter = policy_set["obs_adapter"]
+        self._current_policy_id = policy_id
+        # refresh env
+        self.env.reset()
+        self.env.update_dof_cfg(override_cfg=self.policy.cfg_action_dof)
+        logger.warning(f"Switched to policy: {policy_id}: {self.policy.name}")
 
-            env_data_adapted = env_data.copy()
-            env_data_adapted.dof_pos = obs_adapter.fit(env_data_adapted.dof_pos)
-            env_data_adapted.dof_vel = obs_adapter.fit(env_data_adapted.dof_vel)
+    def switch_policy(self, policy_id: int):
+        """Switch to the policy as policy_id after delay."""
+        if not (0 <= policy_id < self.num_policies):
+            raise ValueError(f"Policy id {policy_id} out of range [0, {self.num_policies})")
+        self.policy_by_id(policy_id).reset()
+        self.warmup_policy_indices.add(policy_id)
+        self.timer.add(lambda: self.set_policy(policy_id), delay_steps=self.DELAY_STEPS_SWITCH)
 
-            observation = policy_set["policy"].get_observation(env_data_adapted, ctrl_data)
-            observation_all[policy_name] = observation
+    def step(self, env_data, ctrl_data):
+        # policy warmup
+        for idx in self.warmup_policy_indices:
+            if idx != self.current_policy_id:
+                self.policy_by_id(idx).get_observation(env_data, ctrl_data)
 
-        return observation_all[self.current_policy_name]
-
-    def get_action(self, obs: np.ndarray) -> np.ndarray:
-        # run single policy
-        return self.get_policy_inst().get_action(obs)
-        # # run all policies
-        # action_all = {}
-        # for policy_name, policy_set in self.policies.items():
-        #     actions = policy_set["policy"].get_action(obs)
-        #     action_all[policy_name] = actions
-
-        # return action_all[self.current_policy_name]
-
-    def get_action_adapted(self, obs: np.ndarray) -> np.ndarray:
-        action = self.get_action(obs)
-        actions_adapter = self.get_policy_actions_adapter()
-        return actions_adapter.fit(action)
-
-    def reset(self):
-        return self.get_policy_inst().reset()
-
-    def post_step_callback(self, commands: list[str] | None = None):
-        # for _, policy_set in self.policies.items():
-        #     policy = policy_set["policy"]
-        #     policy.post_step_callback(commands)
-        return self.get_policy_inst().post_step_callback(commands)
-
-    def debug_viz(self, visualizer, env_data, ctrl_data, extras):
-        return self.get_policy_inst().debug_viz(visualizer, env_data, ctrl_data, extras)
+        self.timer.tick()
 
 
 @pipeline_registry.register
 class RlMultiPolicyPipeline(RlPipeline):
     cfg: RlMultiPolicyPipelineCfg
+
+    @property
+    def policy(self) -> PolicyWrapper:
+        return self.policy_manager.policy
 
     def __init__(self, cfg: RlMultiPolicyPipelineCfg):
         # Skip RlPipeline initialization
@@ -128,46 +98,47 @@ class RlMultiPolicyPipeline(RlPipeline):
 
         self.ctrl_manager = CtrlManager(cfg_ctrls=self.cfg.ctrl, env=self.env, device=self.device)
 
-        self.policy = PolicySwitch(
-            cfg_policies=[self.cfg.policy] + self.cfg.policy_extra,
-            env_joint_names=self.env.joint_names,
+        self.policy_manager = PolicyManager(
+            cfg_policies=self.cfg.policies,
+            env=self.env,
             device=self.device,
         )
-        self.env.update_dof_cfg(override_cfg=self.policy.get_policy_inst().cfg_action_dof)
+        self.env.update_dof_cfg(override_cfg=self.policy.cfg_action_dof)
         self.visualizer = self.env.visualizer
 
-        self.freq = self.cfg.policy.freq
+        self.freq = self.cfg.policies[0].freq
         self.dt = 1.0 / self.freq
 
         self.self_check()
         self.reset()
 
+    def self_check(self):
+        self.policy_manager.warmup_policy_indices = set(list(range(self.policy_manager.num_policies)))
+        super().self_check()
+        self.policy_manager.warmup_policy_indices = set()
+
     def post_step_callback(self, env_data, ctrl_data, extras, pd_target):
         self.timestep += 1
 
-        policy_switch_target = None
         commands = ctrl_data.get("COMMANDS", [])
         for command in commands:
             match command:
                 case "[SHUTDOWN]":
-                    logger.warning("Killed by remote!")
+                    logger.warning("Emergency shutdown!")
                     self.env.shutdown()
-                case "[ENV_RESET]":
-                    logger.warning("Env reset!")
-                    self.env.reset()
+                case "[SIM_REBORN]":
+                    if hasattr(self.env, "reborn"):
+                        logger.warning("Simulation Env reborn!")
+                        self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
                 case "[POLICY_TOGGLE]":
                     logger.warning("Policy toggled!")
-                    next_policy_name = self.policy.current_policy_name
-                    policy_names = list(self.policy.policies.keys())
-                    if len(policy_names) > 1:
-                        next_idx = (policy_names.index(self.policy.current_policy_name) + 1) % len(policy_names)
-                        next_policy_name = policy_names[next_idx]
-                    policy_switch_target = next_policy_name
+                    next_policy_id = (self.policy_manager.current_policy_id + 1) % self.policy_manager.num_policies
+                    self.policy_manager.switch_policy(next_policy_id)
+
                 case cmd if cmd.startswith("[POLICY_SWITCH]"):
                     policy_id = int(cmd.split(",")[1])
-                    policy_names = list(self.policy.policies.keys())
-                    if policy_id < len(policy_names):
-                        policy_switch_target = policy_names[policy_id]
+                    if policy_id < self.policy_manager.num_policies:
+                        self.policy_manager.switch_policy(policy_id)
 
         self.ctrl_manager.post_step_callback(ctrl_data)
 
@@ -175,13 +146,7 @@ class RlMultiPolicyPipeline(RlPipeline):
         if self.visualizer is not None:
             self.policy.debug_viz(self.visualizer, env_data, ctrl_data, extras)
 
-        # Handle policy switch after step to avoid mid-step change
-        if policy_switch_target is not None:
-            self.policy.reset()  # TODO: reset then warm up
-            self.policy.set_policy(policy_switch_target)
-            self.env.reset()
-            self.env.update_dof_cfg(override_cfg=self.policy.get_policy_inst().cfg_action_dof)
-            logger.warning(f"Policy switched to {policy_switch_target}!")
+        self.policy_manager.step(env_data, ctrl_data)
 
         if self.cfg.debug.log_obs:
             self.debug_logger.log(
@@ -203,8 +168,7 @@ class RlMultiPolicyPipeline(RlPipeline):
 
         obs, extras = self.policy.get_observation(env_data, ctrl_data)
 
-        actions_adapted = self.policy.get_action_adapted(obs)
-        pd_target = actions_adapted + self.env.default_pos
+        pd_target = self.policy.get_pd_target(obs)
 
         if not dry_run:
             self.env.step(pd_target, extras.get("hand_pose", None))

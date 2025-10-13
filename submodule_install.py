@@ -27,14 +27,13 @@ def install_submodules(selected=None):
     for name, info in config.items():
         print(f"\n----- Installing submodule: {name} -----")
         install = info.get("install", False)
+        if (selected is None and not install) or (selected is not None and name not in selected):
+            print(f"Skipping submodule: {name}")
+            continue
+
         path = Path(info["path"])
         patches = info.get("patches", [])
         addons = info.get("addons", [])
-
-        if not install:
-            if selected is None or name not in selected:
-                print(f"Skipping submodule: {name}")
-                continue
 
         print(f"Initializing submodule '{name}'...")
         run(f"git submodule update --init {path}")

@@ -12,6 +12,13 @@ mujoco_viewer:
     - ../patches/mujoco_viewer.patch
 
 
+# Python binding for Unitree SDK2, https://github.com/GDDG08/unitree_cpp
+# need to install Unitree SDK2 first
+unitree_cpp:
+  install: false
+  path: packages/unitree_cpp
+
+
 # For OmniH2O, motionlib controller
 phc:
   install: false
@@ -26,13 +33,6 @@ phc:
     - ../patches/phc_addon_g1
   extra_packages:
     - third_party/phc/poselib
-
-
-# Python binding for Unitree SDK2, https://github.com/GDDG08/unitree_cpp
-# need to install Unitree SDK2 first
-unitree_cpp:
-  install: false
-  path: packages/unitree_cpp
 
 
 # ZED Camera Odometry

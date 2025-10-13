@@ -25,8 +25,8 @@ class RlPipelineCfg(PipelineCfg):
     robot: str  # robot name, e.g. "g1"
 
     env: EnvCfg | Any
-    policy: PolicyCfg | Any
     ctrl: list[CtrlCfg | Any] = []
+    policy: PolicyCfg | Any
 
 
 class RlMultiPolicyPipelineCfg(PipelineCfg):
@@ -38,9 +38,20 @@ class RlMultiPolicyPipelineCfg(PipelineCfg):
     env: EnvCfg | Any
     ctrl: list[CtrlCfg | Any] = []
 
-    policy: PolicyCfg | Any
-    """Main policy, as init"""
-    policy_extra: list[PolicyCfg | Any] = []
-    """Extra policies, can be switched to"""
+    policies: list[PolicyCfg | Any] = []
+    """First policy as init, rest as extra policies, can be switched to"""
 
-    # TODO: single policy, multi chpt
+
+class RlLocoMimicPipelineCfg(PipelineCfg):
+    pipeline_type: str = "RlLocoMimicPipeline"
+
+    # ===== Pipeline Config =====
+    robot: str  # robot name, e.g. "g1"
+
+    env: EnvCfg | Any
+    ctrl: list[CtrlCfg | Any] = []
+
+    loco_policy: PolicyCfg | Any
+    """LocoMotion policy, as init"""
+    mimic_policies: list[PolicyCfg | Any] = []
+    """MotionMimic policies, can be switched to"""

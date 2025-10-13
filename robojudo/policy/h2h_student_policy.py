@@ -22,6 +22,8 @@ class H2HStudentPolicy(Policy):
         self.scales_ang_vel = np.asarray(self.cfg_policy.obs_scales.ang_vel, dtype=np.float32)
         self.scales_dof_vel = np.asarray(self.cfg_policy.obs_scales.dof_vel, dtype=np.float32)
 
+        # self.ref_dof_pos = None
+
         self._init_history(np.zeros(self.history_obs_size))
 
     def _get_commands(self, ctrl_data):
@@ -33,6 +35,8 @@ class H2HStudentPolicy(Policy):
         ref_body_pos_subset = motion_res["ref_body_pos_subset"].copy()
         ref_body_vel_subset = motion_res["ref_body_vel_subset"].copy()
         robot_body_pos_subset = motion_res["robot_body_pos_subset"].copy()
+
+        # self.ref_dof_pos = motion_res["dof_pos"].copy()
 
         if "hand_pose" in motion_res:
             ref_hand_pose = motion_res["hand_pose"].copy()
@@ -124,6 +128,11 @@ class H2HStudentPolicy(Policy):
 
     def post_step_callback(self, commands=None):
         pass
+
+    # def get_init_dof_pos(self):
+    #     if self.ref_dof_pos is not None:
+    #         return self.ref_dof_pos
+    #     return self.default_dof_pos
 
     def debug_viz(self, visualizer: MujocoVisualizer, env_data, ctrl_data, extras):
         visualizer.update_rg_view(

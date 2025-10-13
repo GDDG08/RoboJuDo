@@ -60,12 +60,10 @@ class UnitreeEnvCfg(RobotEnvCfg):
     """
 
     class UnitreeCfg(Config):
-        """UnitreeCppEnv configuration"""
+        """Unitree SDK configuration"""
 
         net_if: str = "eth0"
         """network interface to communicate with the robot"""
-        # net_if : str = "enp13s0"
-        # net_if : str = "eno2"
 
         robot: Literal["h1", "g1"]
         msg_type: Literal["hg", "go"]
@@ -81,7 +79,9 @@ class UnitreeEnvCfg(RobotEnvCfg):
         control_dt: float = 0.02
         """control command dt"""
 
-    env_type: str = "UnitreeCppEnv"
+    env_type: str = "UnitreeEnv"  # For unitree_sdk2py
+    # env_type: str = "UnitreeCppEnv" # For unitree_cpp
+    """UnitreeEnv for unitree_sdk2py, UnitreeCppEnv for unitree_cpp, check README for more details"""
 
     unitree: UnitreeCfg
 

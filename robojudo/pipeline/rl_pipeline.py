@@ -2,6 +2,7 @@ import logging
 import time
 
 import numpy as np
+from box import Box
 
 import robojudo.environment
 import robojudo.policy
@@ -9,11 +10,54 @@ from robojudo.controller import CtrlManager
 from robojudo.environment import Environment
 from robojudo.pipeline import Pipeline, pipeline_registry
 from robojudo.pipeline.pipeline_cfgs import RlPipelineCfg
-from robojudo.policy import Policy
+from robojudo.policy import Policy, PolicyCfg
 from robojudo.tools.dof import DoFAdapter
+from robojudo.tools.tool_cfgs import DoFConfig
 from robojudo.utils.progress import ProgressBar
 
 logger = logging.getLogger(__name__)
+
+
+class PolicyWrapper:
+    """A wrapper for Policy to handle observation and action adaptation."""
+
+    def __init__(self, cfg_policy: PolicyCfg, env_dof_cfg: DoFConfig, device: str):
+        self.env_dof_cfg = env_dof_cfg
+
+        policy_type = cfg_policy.policy_type
+        policy_name = policy_type
+        if hasattr(cfg_policy, "policy_name"):
+            policy_name += "@" + cfg_policy.policy_name  # type: ignore
+        # while policy_name in self.policies.keys():
+        #     policy_name += "_new"
+        self.name = policy_name
+
+        policy_class: type[Policy] = getattr(robojudo.policy, policy_type)
+        self.policy: Policy = policy_class(cfg_policy=cfg_policy, device=device)
+        self.obs_adapter = DoFAdapter(env_dof_cfg.joint_names, self.policy.cfg_obs_dof.joint_names)
+        self.actions_adapter = DoFAdapter(self.policy.cfg_action_dof.joint_names, env_dof_cfg.joint_names)
+
+    def get_observation(self, env_data: Box, ctrl_data: Box):
+        env_data_adapted = env_data.copy()
+        env_data_adapted.dof_pos = self.obs_adapter.fit(env_data_adapted.dof_pos)
+        env_data_adapted.dof_vel = self.obs_adapter.fit(env_data_adapted.dof_vel)
+        return self.policy.get_observation(env_data_adapted, ctrl_data)
+
+    def get_action(self, obs):
+        action = self.policy.get_action(obs)
+        return self.actions_adapter.fit(action)
+
+    def get_pd_target(self, obs):
+        action = self.policy.get_action(obs)
+        pd_target = action + self.policy.default_pos
+        return self.actions_adapter.fit(pd_target, template=self.env_dof_cfg.default_pos)
+
+    def get_init_dof_pos(self):
+        return self.actions_adapter.fit(self.policy.get_init_dof_pos(), template=self.env_dof_cfg.default_pos)
+
+    def __getattr__(self, name):
+        """Fallback: delegate other func to the wrapped policy."""
+        return getattr(self.policy, name)
 
 
 @pipeline_registry.register
@@ -28,22 +72,14 @@ class RlPipeline(Pipeline):
 
         self.ctrl_manager = CtrlManager(cfg_ctrls=self.cfg.ctrl, env=self.env, device=self.device)
 
-        policy_class: type[Policy] = getattr(robojudo.policy, self.cfg.policy.policy_type)
-        self.policy: Policy = policy_class(
+        self.policy = PolicyWrapper(
             cfg_policy=self.cfg.policy,
+            env_dof_cfg=self.env.dof_cfg,
             device=self.device,
         )
+
         self.env.update_dof_cfg(override_cfg=self.policy.cfg_action_dof)
         self.visualizer = self.env.visualizer
-
-        self.obs_adapter = DoFAdapter(
-            self.env.joint_names,
-            self.policy.cfg_obs_dof.joint_names,
-        )
-        self.actions_adapter = DoFAdapter(
-            self.policy.cfg_action_dof.joint_names,
-            self.env.joint_names,
-        )
 
         self.freq = self.cfg.policy.freq
         self.dt = 1.0 / self.freq
@@ -61,7 +97,7 @@ class RlPipeline(Pipeline):
         self.timestep = 0
 
         self.env.reset()
-        # self.env.reset(init_qpos=[0.2, 0.2, 0.8] + [ 0.707, 0, 0, 0.707]) # FOR DEBUG
+        # self.env.reborn(init_qpos=[0.2, 0.2, 0.8] + [ 0.707, 0, 0, 0.707]) # FOR SIM DEBUG
         self.policy.reset()
         self.ctrl_manager.reset()
 
@@ -71,11 +107,12 @@ class RlPipeline(Pipeline):
         for command in commands:
             match command:
                 case "[SHUTDOWN]":
-                    logger.warning("Killed by remote!")
+                    logger.warning("Emergency shutdown!")
                     self.env.shutdown()
-                case "[ENV_RESET]":
-                    logger.warning("Env reset!")
-                    self.env.reset()
+                case "[SIM_REBORN]":
+                    if hasattr(self.env, "reborn"):
+                        logger.warning("Simulation Env reborn!")
+                        self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
 
         self.ctrl_manager.post_step_callback(ctrl_data)
 
@@ -95,34 +132,28 @@ class RlPipeline(Pipeline):
     def step(self, dry_run=False):
         self.env.update()
         env_data = self.env.get_data()
-        env_data_adapted = env_data.copy()
-        env_data_adapted.dof_pos = self.obs_adapter.fit(env_data_adapted.dof_pos)
-        env_data_adapted.dof_vel = self.obs_adapter.fit(env_data_adapted.dof_vel)
 
-        ctrl_data = self.ctrl_manager.get_ctrl_data(env_data_adapted)
+        ctrl_data = self.ctrl_manager.get_ctrl_data(env_data)
 
         commands = ctrl_data.get("COMMANDS", [])
         if len(commands) > 0:
             logger.info(f"{'=' * 10} COMMANDS {'=' * 10}\n{commands}")
 
-        obs, extras = self.policy.get_observation(env_data_adapted, ctrl_data)
-        actions = self.policy.get_action(obs)
-
-        actions_adapted = self.actions_adapter.fit(actions)
-        pd_target = actions_adapted + self.env.default_pos
+        obs, extras = self.policy.get_observation(env_data, ctrl_data)
+        pd_target = self.policy.get_pd_target(obs)
 
         if not dry_run:
             self.env.step(pd_target, extras.get("hand_pose", None))
 
-        self.post_step_callback(env_data_adapted, ctrl_data, extras, pd_target)
+        self.post_step_callback(env_data, ctrl_data, extras, pd_target)
 
     def prepare(self, wait=True):
-        # TODO: init pos align
-        desired_motor_angle = self.env.default_pos.copy()
+        # desired_motor_angle = self.env.default_pos.copy()
+        desired_motor_angle = self.policy.get_init_dof_pos()
 
-        logger.info(f"{desired_motor_angle=}")
+        # logger.info(f"{desired_motor_angle=}")
         current_motor_angle = np.array(self.env.dof_pos)
-        logger.info(f"{current_motor_angle=}")
+        # logger.info(f"{current_motor_angle=}")
 
         traj_len = 1000
         last_step_time = time.time()
@@ -146,7 +177,6 @@ class RlPipeline(Pipeline):
             else:
                 logger.error("Warning: frame drop")
             last_step_time = time.time()
-            # print(t)
             pbar.update()
 
             if t == 0.9 * traj_len:

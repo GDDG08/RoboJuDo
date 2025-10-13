@@ -6,33 +6,35 @@ from robojudo.environment.env_cfgs import UnitreeEnvCfg
 from .g1_env_cfg import G1EnvCfg
 
 
+class G1UnitreeCfg(UnitreeEnvCfg.UnitreeCfg):
+    robot: Literal["h1", "g1"] = "g1"
+
+    msg_type: Literal["hg", "go"] = "hg"
+    hand_type: Literal["Dex-3", "Inspire", "NONE"] = "NONE"
+
+    enable_odometry: bool = True
+
+
 class G1RealEnvCfg(G1EnvCfg, UnitreeEnvCfg):
-    env_type: str = UnitreeEnvCfg.model_fields["env_type"].default
+    # env_type: str = UnitreeEnvCfg.model_fields["env_type"].default
+    env_type: str = "UnitreeCppEnv"
     # ====== ENV CONFIGURATION ======
-    unitree: UnitreeEnvCfg.UnitreeCfg = UnitreeEnvCfg.UnitreeCfg(
+    unitree: UnitreeEnvCfg.UnitreeCfg = G1UnitreeCfg(
         net_if="eth0",
-        # net_if = "enp13s0",
-        robot="g1",
-        msg_type="hg",
-        hand_type="NONE",
-        enable_odometry=True,
     )
 
-    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"
+    odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "UNITREE"
 
     joint2motor_idx: list[int] | None = None  # list(range(0, 29))
 
 
 class G1WithHandRealEnvCfg(G1EnvCfg, UnitreeEnvCfg):
-    env_type: str = UnitreeEnvCfg.model_fields["env_type"].default
+    # env_type: str = UnitreeEnvCfg.model_fields["env_type"].default
+    env_type: str = "UnitreeCppEnv"
     # ====== ENV CONFIGURATION ======
-    unitree: UnitreeEnvCfg.UnitreeCfg = UnitreeEnvCfg.UnitreeCfg(
+    unitree: UnitreeEnvCfg.UnitreeCfg = G1UnitreeCfg(
         net_if="eth0",
-        # net_if = "enp13s0",
-        robot="g1",
-        msg_type="hg",
         hand_type="Dex-3",
-        enable_odometry=True,
     )
 
     odometry_type: Literal["NONE", "DUMMY", "UNITREE", "ZED"] = "DUMMY"

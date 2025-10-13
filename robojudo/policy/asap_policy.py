@@ -34,15 +34,8 @@ class AsapPolicy(Policy):
         super().__init__(cfg_policy=cfg_policy, device=device)
 
         self.obs_scales = cfg_policy.obs_scales
-        # self.start_upper_dof_pos = cfg_policy.start_upper_body_dof_pos  # for interpolation loco to mimic
-        # self.end_upper_dof_pos = np.zeros((1, 17))
         self.motion_length_s = cfg_policy.motion_length_s
         self.use_history = cfg_policy.USE_HISTORY
-
-        if self.use_history:
-            self.history_obs_dims = cfg_policy.history_obs_dims
-            default_history = [np.zeros(dim, dtype=np.float32) for dim in self.history_obs_dims.values()]
-            self._init_history(default_history)
 
         self.reset()
 
@@ -50,6 +43,13 @@ class AsapPolicy(Policy):
         self.timestep: float = 0
         self.pbar = ProgressBar(f"ASAP {self.cfg_policy.policy_name}", self.motion_length_s)
         self.play_speed: float = 1.0
+        self.flag_motion_done = False
+
+        self.last_action = np.zeros(self.num_actions)
+        if self.use_history:
+            self.history_obs_dims = self.cfg_policy.history_obs_dims
+            default_history = [np.zeros(dim, dtype=np.float32) for dim in self.history_obs_dims.values()]
+            self._init_history(default_history)
 
     def post_step_callback(self, commands: list[str] | None = None):
         self.pbar.set(self.timestep * self.dt)
@@ -59,10 +59,6 @@ class AsapPolicy(Policy):
             self.flag_motion_done = True
         else:
             self.timestep += 1 * self.play_speed
-
-        # TODO: If current mimic policy is done, switch to locomotion policy
-        if self._get_frame_encoding() >= 1.0:
-            self.reset()
 
         for command in commands or []:
             match command:
@@ -129,7 +125,9 @@ class AsapPolicy(Policy):
         ]
         self.history_buf.appendleft(obs_a)
 
-        extras = {}
+        extras = {
+            "CALLBACK": ["[MOTION_DONE]"] if self.flag_motion_done else [],
+        }
         return obs, extras
 
     def get_action(self, obs: np.ndarray) -> np.ndarray:
@@ -150,6 +148,19 @@ class AsapPolicy(Policy):
         self.last_action = actions.copy()  # TODO: check all policies after process
         processed_actions = processed_actions * self.action_scale
         return processed_actions
+
+    def get_init_dof_pos(self) -> np.ndarray:
+        """
+        Return first frame of the reference motion.
+        """
+        # return self.last_action
+        start_upper_body_dof_pos = self.cfg_policy.start_upper_body_dof_pos
+        if start_upper_body_dof_pos is not None:
+            dof_pos = self.default_dof_pos.copy()
+            dof_pos[-len(start_upper_body_dof_pos) :] = start_upper_body_dof_pos
+            return dof_pos
+        else:
+            return self.default_dof_pos.copy()
 
     def debug_viz(self, visualizer: MujocoVisualizer, env_data, ctrl_data, extras):
         pass
@@ -173,32 +184,38 @@ class AsapLocoPolicy(Policy):
         super().__init__(cfg_policy=cfg_policy, device=device)
 
         self.obs_scales = cfg_policy.obs_scales
-
         self.use_history = cfg_policy.USE_HISTORY
 
-        if self.use_history:
-            self.history_obs_dims = cfg_policy.history_obs_dims
-            default_history = [np.zeros(dim) for dim in self.history_obs_dims.values()]
-            self._init_history(default_history)
+        # if self.use_history:
+        #     self.history_obs_dims = cfg_policy.history_obs_dims
+        #     default_history = [np.zeros(dim) for dim in self.history_obs_dims.values()]
+        #     self._init_history(default_history)
 
         self.num_upper_dofs = cfg_policy.NUM_UPPER_BODY_JOINTS
         self.num_lower_dofs = self.num_dofs - self.num_upper_dofs
-        self.ref_upper_dof_pos = np.zeros(self.num_upper_dofs)
-        self.ref_upper_dof_pos[4] = 0.3
-        self.ref_upper_dof_pos[11] = -0.3
-        self.ref_upper_dof_pos[6] = 1.0
-        self.ref_upper_dof_pos[13] = 1.0
+
+        if ref_upper_dof_pos_default := cfg_policy.ref_upper_dof_pos_default:
+            self.ref_upper_dof_pos_default = np.array(ref_upper_dof_pos_default, dtype=np.float32)
+        else:
+            self.ref_upper_dof_pos_default = np.zeros((self.num_upper_dofs,), dtype=np.float32)
+        self.base_height_command_default = np.array([cfg_policy.command_base_height_default], dtype=np.float32)
 
         self.gait_period = cfg_policy.GAIT_PERIOD
-        self.lin_vel_command = np.array([0.0, 0.0])
-        self.ang_vel_command = np.array([0.0])
-        self.stand_command = np.array([0])
-        self.base_height_command = np.array([0.78])
-
         self.reset()
 
     def reset(self):
         self.timestep: float = 0
+        self.ref_upper_dof_pos = self.ref_upper_dof_pos_default.copy()
+        self.lin_vel_command = np.array([0.0, 0.0])
+        self.ang_vel_command = np.array([0.0])
+        self.stand_command = np.array([0])
+        self.base_height_command = self.base_height_command_default.copy()
+
+        self.last_action = np.zeros(self.num_actions)
+        if self.use_history:
+            self.history_obs_dims = self.cfg_policy.history_obs_dims
+            default_history = [np.zeros(dim) for dim in self.history_obs_dims.values()]
+            self._init_history(default_history)
 
     def post_step_callback(self, commands: list[str] | None = None):
         self.timestep += 1
@@ -294,14 +311,17 @@ class AsapLocoPolicy(Policy):
             processed_actions = np.clip(processed_actions, -self.action_clip, self.action_clip)
 
         self.last_action[: self.num_lower_dofs] = processed_actions.copy()
-        self.last_action[self.num_lower_dofs :] = self.ref_upper_dof_pos.copy()
+        # self.last_action[self.num_lower_dofs :] = self.ref_upper_dof_pos.copy()
 
         processed_actions = processed_actions * self.action_scale
 
-        full_actions = np.concatenate([processed_actions, self.ref_upper_dof_pos], axis=0)
-        return full_actions
+        # full_actions = np.concatenate([processed_actions, self.ref_upper_dof_pos], axis=0)
+        # return full_actions
+        return processed_actions
 
     def _update_commands(self, ctrl_data):
+        if (ref_dof_pos := ctrl_data.get("ref_dof_pos", None)) is not None:
+            self.ref_upper_dof_pos = ref_dof_pos.copy()[-self.num_upper_dofs :]
         for key in ctrl_data.keys():
             if key in ["JoystickCtrl", "UnitreeCtrk"]:
                 axes = ctrl_data[key]["axes"]
