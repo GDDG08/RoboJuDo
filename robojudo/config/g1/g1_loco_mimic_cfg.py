@@ -30,7 +30,7 @@ from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg  # noqa: F401
 @cfg_registry.register
 class g1_locomimic_beyondmimic(G1RlLocoMimicPipelineCfg):
     """
-    Smooth wwitch between multiple BeyondMimic policies, Sim2Sim.
+    Smooth switch between multiple BeyondMimic policies, Sim2Sim.
     """
 
     robot: str = "g1"

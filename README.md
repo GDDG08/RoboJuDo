@@ -115,6 +115,7 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | **ASAP**<br>**KungfuBot** | 🖥️ 🤖 | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP)<br>[PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
+
 🖥️ means policy is ready for simulation, while 🤖 means policy has been tested on real robot.
 
 
@@ -185,6 +186,9 @@ python submodule_install.py
 In the following, we use the deployment on G1 as an example.
 
 <!-- 😎For module combinations, we provide ready-to-use config files that can be directly applied.  -->
+1. [Run Sim2Sim](#run-robojudo-on-simulation)
+2. [Run Sim2Real](#run-robojudo-on-real-robot-🤖)
+3. [Deploy More Policies✨](#deploy-more-policies)
 
 ## Run RoboJuDo on Simulation
 
@@ -240,11 +244,9 @@ Edit the `env_type` and `net_if` according to your robot sdk setup.
 class g1_real(g1):
     env: G1RealEnvCfg = G1RealEnvCfg(
         env_type="UnitreeEnv",  # For unitree_sdk2py
-        # env_type="UnitreeCppEnv", # For unitree_cpp, check README for more details
-        unitree=UnitreeEnvCfg.UnitreeCfg(
+        # env_type="UnitreeCppEnv",  # For unitree_cpp, check README for more details
+        unitree=G1UnitreeCfg(
             net_if="eth0",  # note: change to your network interface
-            robot="g1",
-            msg_type="hg",
         ),
     )
 ```
@@ -265,7 +267,7 @@ You can control the real robot using the Unitree controller:
 - `left axes` move forward/backward/let/right
 - `right axes` turn left/right
 
-## Deploy more Policies
+## Deploy More Policies
 
 💡Now you’re familiar with RoboJuDo’s config design, it’s time to experience the **amazing variety of policies**!
 
@@ -293,7 +295,7 @@ Xbox Controller:
 - `right axes(for/back)` stand higher/squat
 - `right axes(left/right)` turn left/right
 
-Switch between Unitree Policy and BeyondMimic Policy:
+Switch between Unitree Policy and AMO Policy:
 - `RB + Dpad[Down]` switch to Unitree Policy
 - `RB + Dpad[Up]` switch to AMO Policy
 
@@ -320,10 +322,9 @@ We have the same Keyboard control as ASAP:
 
 ### More Policies
 
-We also provide config files for other policies, check [config_g1](robojudo/config/g1) and [config_g1](robojudo/config/h1) for more details.
+We also provide config files for other policies, check [config_g1](robojudo/config/g1) and [config_h1](robojudo/config/h1) for more details.
 
 In RoboJuDo, we have fully replicated ASAP’s Sim2Real workflow, including all motions. 
-
 Please refer to `g1_locomimic_asap_full` in [g1_loco_mimic_cfg.py](robojudo/config/g1/g1_loco_mimic_cfg.py). This highlights the modular advantages of our framework.
 
 
