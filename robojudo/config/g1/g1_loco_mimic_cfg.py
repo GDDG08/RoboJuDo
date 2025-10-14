@@ -16,6 +16,7 @@ from .ctrl.g1_motion_ctrl_cfg import G1MotionCtrlCfg  # noqa: F401
 from .env.g1_dummy_env_cfg import G1DummyEnvCfg  # noqa: F401
 from .env.g1_mujuco_env_cfg import G1_12MujocoEnvCfg, G1_23MujocoEnvCfg, G1MujocoEnvCfg  # noqa: F401
 from .env.g1_real_env_cfg import G1RealEnvCfg, G1UnitreeCfg  # noqa: F401
+from .pipeline.g1_locomimic_pipeline_cfg import G1RlLocoMimicPipelineCfg  # noqa: F401
 from .policy.g1_amo_policy_cfg import G1AmoPolicyCfg  # noqa: F401
 from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg, G1KungfuBotPolicyCfg  # noqa: F401
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
@@ -27,7 +28,7 @@ from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg  # noqa: F401
 
 
 @cfg_registry.register
-class g1_locomimic_beyondmimic(RlLocoMimicPipelineCfg):
+class g1_locomimic_beyondmimic(G1RlLocoMimicPipelineCfg):
     """
     Smooth wwitch between multiple BeyondMimic policies, Sim2Sim.
     """
@@ -70,7 +71,7 @@ class g1_locomimic_beyondmimic(RlLocoMimicPipelineCfg):
 
 
 @cfg_registry.register
-class g1_locomimic_asap(RlLocoMimicPipelineCfg):
+class g1_locomimic_asap(G1RlLocoMimicPipelineCfg):
     """
     Unitree G1 robot configuration, ASAP Locomotion + Deepmimic, Sim2Sim.
     Dynamic switch, keyboard control.
@@ -181,7 +182,7 @@ class g1_locomimic_asap_real(g1_locomimic_asap):
 
 # ================= ASAP Policy  ================= #
 @cfg_registry.register
-class g1_locomimic_asap_full(RlLocoMimicPipelineCfg):
+class g1_locomimic_asap_full(G1RlLocoMimicPipelineCfg):
     """
     Exact reproduce of the original ASAP code.
     You need to download the model files from the official repo and put them in assets/models/g1/asap

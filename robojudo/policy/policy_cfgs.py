@@ -306,16 +306,4 @@ class AsapLocoPolicyCfg(PolicyCfg):
     NUM_UPPER_BODY_JOINTS: int
 
     # ======= Default Command CONFIGURATION =======
-    ref_upper_dof_pos_default: list[float] | None = None
-    """the default upper body pos, use zero if None"""
     command_base_height_default: float
-
-    @model_validator(mode="after")
-    def check_ref_upper_dof_pos_default(self):
-        if self.ref_upper_dof_pos_default is not None:
-            if len(self.ref_upper_dof_pos_default) != self.NUM_UPPER_BODY_JOINTS:
-                raise ValueError(
-                    f"Length of ref_upper_dof_pos_default ({len(self.ref_upper_dof_pos_default)}) "
-                    f"must be equal to NUM_UPPER_BODY_JOINTS ({self.NUM_UPPER_BODY_JOINTS})"
-                )
-        return self

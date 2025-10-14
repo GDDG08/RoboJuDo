@@ -194,10 +194,7 @@ class AsapLocoPolicy(Policy):
         self.num_upper_dofs = cfg_policy.NUM_UPPER_BODY_JOINTS
         self.num_lower_dofs = self.num_dofs - self.num_upper_dofs
 
-        if ref_upper_dof_pos_default := cfg_policy.ref_upper_dof_pos_default:
-            self.ref_upper_dof_pos_default = np.array(ref_upper_dof_pos_default, dtype=np.float32)
-        else:
-            self.ref_upper_dof_pos_default = np.zeros((self.num_upper_dofs,), dtype=np.float32)
+        self.ref_upper_dof_pos_default = np.zeros((self.num_upper_dofs,), dtype=np.float32)
         self.base_height_command_default = np.array([cfg_policy.command_base_height_default], dtype=np.float32)
 
         self.gait_period = cfg_policy.GAIT_PERIOD

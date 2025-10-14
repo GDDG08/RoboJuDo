@@ -24,14 +24,15 @@ class PolicyInterpManager(PolicyManager):
         IN_PROGRESS = auto()
         END = auto()
 
-    DURATIONS_LOCO_MIMIC = [0, 25, 15]  # [start, in-progress, end] in steps
-    DURATIONS_MIMIC_LOCO = [15, 25, 0]  # [start, in-progress, end] in steps
+    DURATIONS_LOCO_MIMIC = [0, 75, 25]  # [start, in-progress, end] in steps
+    DURATIONS_MIMIC_LOCO = [25, 75, 0]  # [start, in-progress, end] in steps
 
     def __init__(
         self,
         cfg_policy_loco: PolicyCfg,
         cfg_policies: list[PolicyCfg],
         env: Environment,
+        loco_dof_pos: np.ndarray | None = None,
         device: str = "cpu",
     ):
         cfg_policies_all = [cfg_policy_loco] + cfg_policies
@@ -51,7 +52,8 @@ class PolicyInterpManager(PolicyManager):
         self.interp_callback_start = None
         self.interp_callback_end = None
 
-        self.override_dof_pos = self.env.default_pos
+        self.loco_dof_pos = loco_dof_pos if loco_dof_pos is not None else self.env.default_pos.copy()
+        self.override_dof_pos = self.loco_dof_pos.copy()
 
     def _interpolate_init(
         self,
@@ -135,7 +137,7 @@ class PolicyInterpManager(PolicyManager):
             self.policy_by_id(self.policy_loco_id).reset()
             self.warmup_policy_indices.add(self.policy_loco_id)
         self._interpolate_init(
-            get_target_pos=lambda: self.policy_by_id(self.policy_loco_id).get_init_dof_pos(),
+            get_target_pos=lambda: self.loco_dof_pos,
             durations=self.DURATIONS_MIMIC_LOCO,
             callback_start=lambda: self.set_policy(self.policy_loco_id),
         )
@@ -175,10 +177,24 @@ class RlLocoMimicPipeline(RlMultiPolicyPipeline):
 
         self.ctrl_manager = CtrlManager(cfg_ctrls=self.cfg.ctrl, env=self.env, device=self.device)
 
+        # upper body override
+        self.num_upper_body_dof = self.cfg.upper_dof_num
+        if upper_dof_pos_default := self.cfg.upper_dof_pos_default:
+            loco_dof_pos = self.env.default_pos.copy()
+            loco_dof_pos[-self.num_upper_body_dof :] = upper_dof_pos_default
+            self.loco_dof_pos = loco_dof_pos
+        else:
+            self.loco_dof_pos = self.env.default_pos
+        if override_dof_indices := self.cfg.upper_dof_override_indices:
+            self.override_dof_indices = override_dof_indices
+        else:
+            self.override_dof_indices = list(range(-self.num_upper_body_dof, 0))
+
         self.policy_manager = PolicyInterpManager(
             cfg_policy_loco=self.cfg.loco_policy,
             cfg_policies=self.cfg.mimic_policies,
             env=self.env,
+            loco_dof_pos=self.loco_dof_pos,
             device=self.device,
         )
         self.env.update_dof_cfg(override_cfg=self.policy.cfg_action_dof)
@@ -188,12 +204,6 @@ class RlLocoMimicPipeline(RlMultiPolicyPipeline):
         self.dt = 1.0 / self.freq
 
         self.policy_locomotion_mimic_flag = 0  # 0: locomotion, 1: mimic
-
-        # upper body override
-        self.num_upper_body_dof = 17  # hardcoded for G1 robot, TODO: make it configurable
-        self.override_dof_idx = list(range(-self.num_upper_body_dof, 0))
-        self.override_dof_idx.remove(-self.num_upper_body_dof + 1)  # remove waist_pitch
-        self.override_dof_idx.remove(-self.num_upper_body_dof + 2)  # remove waist_roll
 
         self.self_check()
         self.reset()
@@ -231,7 +241,6 @@ class RlLocoMimicPipeline(RlMultiPolicyPipeline):
                     self.policy_manager.switch_to_loco()
                 case "[POLICY_MIMIC]":
                     self.policy_locomotion_mimic_flag = 1
-
                     self.policy_manager.switch_to_mimic()
 
         self.ctrl_manager.post_step_callback(ctrl_data)
@@ -269,7 +278,7 @@ class RlLocoMimicPipeline(RlMultiPolicyPipeline):
         pd_target = self.policy.get_pd_target(obs)
 
         if self.policy_manager.current_policy_id == self.policy_manager.policy_loco_id:
-            pd_target[self.override_dof_idx] = self.policy_manager.override_dof_pos[self.override_dof_idx]
+            pd_target[self.override_dof_indices] = self.policy_manager.override_dof_pos[self.override_dof_indices]
 
         if not dry_run:
             self.env.step(pd_target, extras.get("hand_pose", None))

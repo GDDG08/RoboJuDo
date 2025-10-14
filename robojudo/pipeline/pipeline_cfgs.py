@@ -1,5 +1,7 @@
 from typing import Any
 
+from pydantic import model_validator
+
 from robojudo.config import Config
 from robojudo.controller import CtrlCfg
 from robojudo.environment import EnvCfg
@@ -55,3 +57,28 @@ class RlLocoMimicPipelineCfg(PipelineCfg):
     """LocoMotion policy, as init"""
     mimic_policies: list[PolicyCfg | Any] = []
     """MotionMimic policies, can be switched to"""
+
+    # ===== Upper body override Config =====
+    upper_dof_num: int = 0
+    upper_dof_pos_default: list[float] | None = []
+    """Default positions of the upper body DOFs"""
+    upper_dof_override_indices: list[int] | None = []
+    """Indices of the upper body DOFs to be overridden"""
+
+    @model_validator(mode="after")
+    def check_upper_dof(self):
+        if self.upper_dof_pos_default is not None:
+            if len(self.upper_dof_pos_default) != self.upper_dof_num:
+                raise ValueError(
+                    f"Length of upper_dof_pos_default ({len(self.upper_dof_pos_default)}) "
+                    f"must be equal to upper_dof_num ({self.upper_dof_num})"
+                )
+        if self.upper_dof_override_indices is not None:
+            for idx in self.upper_dof_override_indices:
+                if idx < -self.upper_dof_num or idx >= 0:
+                    raise ValueError(
+                        f"upper_dof_override_indices contains invalid index {idx}, "
+                        f"must be in [-{self.upper_dof_num}, 0)"
+                    )
+
+        return self
