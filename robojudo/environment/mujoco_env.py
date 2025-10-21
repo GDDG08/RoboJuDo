@@ -40,6 +40,8 @@ class MujocoEnv(Environment):
             diable_key_callbacks=True,
         )
         self.viewer.cam.distance = 3.0
+        self.viewer.cam.elevation = -10.0
+        self.viewer.cam.azimuth = 180.0
         # self.viewer._paused = True
 
         if cfg_env.visualize_extras:
