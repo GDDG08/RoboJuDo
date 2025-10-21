@@ -14,7 +14,8 @@ msgpack_numpy.patch()
 
 
 class DebugCfg(Config):
-    log_obs: bool = True
+    log_obs: bool = False
+    """Warning, this is debug only, may generate large log files and slow down the system."""
 
 
 class DebugLogger:

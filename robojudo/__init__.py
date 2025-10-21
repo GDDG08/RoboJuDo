@@ -1,4 +1,11 @@
-# fix libgomp issue on ARM platform
+# Fix OMP perfmance issue on ARM platform (Jetson)
+import os
+import platform
+
+if platform.machine().startswith("aarch64"):
+    os.environ["OMP_NUM_THREADS"] = "1"
+
+# Fix libgomp issue on ARM platform (Jetson)
 import torch  # noqa: F401, I001
 import numpy  # noqa: F401, I001
 import scipy.spatial.transform.rotation  # noqa: F401, I001
