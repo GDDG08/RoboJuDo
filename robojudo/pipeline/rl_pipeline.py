@@ -147,9 +147,11 @@ class RlPipeline(Pipeline):
 
         self.post_step_callback(env_data, ctrl_data, extras, pd_target)
 
-    def prepare(self, wait=True):
-        # desired_motor_angle = self.env.default_pos.copy()
-        desired_motor_angle = self.policy.get_init_dof_pos()
+    def prepare(self, init_motor_angle=None):
+        if init_motor_angle is not None:
+            desired_motor_angle = init_motor_angle
+        else:
+            desired_motor_angle = self.policy.get_init_dof_pos()
 
         # logger.info(f"{desired_motor_angle=}")
         current_motor_angle = np.array(self.env.dof_pos)

@@ -286,6 +286,10 @@ class RlLocoMimicPipeline(RlMultiPolicyPipeline):
 
         self.post_step_callback(env_data, ctrl_data, extras, pd_target)
 
+    def prepare(self):
+        init_motor_angle = self.loco_dof_pos.copy()
+        super().prepare(init_motor_angle=init_motor_angle)
+
 
 if __name__ == "__main__":
     pass
