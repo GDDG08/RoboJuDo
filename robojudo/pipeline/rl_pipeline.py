@@ -14,6 +14,7 @@ from robojudo.policy import Policy, PolicyCfg
 from robojudo.tools.dof import DoFAdapter
 from robojudo.tools.tool_cfgs import DoFConfig
 from robojudo.utils.progress import ProgressBar
+from robojudo.utils.util_func import get_gravity_orientation
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,16 @@ class RlPipeline(Pipeline):
         self.policy.reset()
         self.ctrl_manager.reset()
 
+    def safety_check(self):
+        gravity_ori = get_gravity_orientation(self.env.base_quat)
+        angle = np.arccos(np.clip(-gravity_ori[2], -1.0, 1.0))
+        if abs(angle) > 1.0:  # more than ~57 degrees
+            logger.error("Robot fallen! Shutdown for safety.")
+            if hasattr(self.env, "reborn"):
+                self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
+            else:
+                self.env.shutdown()
+
     def post_step_callback(self, env_data, ctrl_data, extras, pd_target):
         self.timestep += 1
         commands = ctrl_data.get("COMMANDS", [])
@@ -120,6 +131,7 @@ class RlPipeline(Pipeline):
         if self.visualizer is not None:
             self.policy.debug_viz(self.visualizer, env_data, ctrl_data, extras)
 
+        self.safety_check()
         if self.cfg.debug.log_obs:
             self.debug_logger.log(
                 env_data=env_data,

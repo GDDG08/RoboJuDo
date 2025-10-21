@@ -345,6 +345,8 @@ class UnitreeEnv(Environment):
             raise ValueError(f"No such control mode: {command}")
 
     def set_gains(self, stiffness, damping):
+        if not self.enabled:
+            return
         assert len(stiffness) == self.num_dofs and len(damping) == self.num_dofs, f"list shape must be {self.num_dofs}!"
 
         self.kps = stiffness

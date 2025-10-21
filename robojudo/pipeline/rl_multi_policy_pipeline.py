@@ -148,6 +148,7 @@ class RlMultiPolicyPipeline(RlPipeline):
 
         self.policy_manager.step(env_data, ctrl_data)
 
+        self.safety_check()
         if self.cfg.debug.log_obs:
             self.debug_logger.log(
                 env_data=env_data,

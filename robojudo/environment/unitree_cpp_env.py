@@ -204,6 +204,8 @@ class UnitreeCppEnv(Environment):
     def set_gains(self, stiffness, damping):
         if not hasattr(self, "unitree"):  # TODO
             return
+        if not self.enabled:
+            return
         self.unitree.set_gains(stiffness, damping)
 
 
