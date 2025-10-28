@@ -12,7 +12,9 @@ We provide the following policies:
 - [UnitreePolicy](#policy--unitreepolicy)
 - [AMOPolicy](#policy--amopolicy)
 - [H2HStudentPolicy](#policy--h2hstudentpolicy)
+- [HugWBCPolicy](#policy--hugwbcpolicy)
 - [BeyondMimicPolicy](#policy--beyondmimicpolicy)
+- [ASAPPolicy](#policy--asappolicy)
 
 ## [Policy](#policy) > [UnitreePolicy](#policy--unitreepolicy)
 
@@ -43,6 +45,14 @@ def _get_commands(self, ctrl_data: dict) -> list[float]:
             break
     return commands
 ```
+
+### [UnitreeWoGaitPolicy](#policy--unitreewogaitpolicy)
+
+For Unitree G1, we also provide `UnitreeWoGaitPolicy`, which supports the new `Unitree-G1-29dof-Velocity` conig from [unitree_rl_lab](https://github.com/unitreerobotics/unitree_rl_lab).
+
+The difference is that `UnitreeWoGaitPolicy` does not include gait in the observation, so the robot will not keep stepping when standing.
+
+script: [unitree_policy.py](../robojudo/policy/unitree_policy.py)
 
 ## [Policy](#policy) > [AMOPolicy](#policy--amopolicy)
 

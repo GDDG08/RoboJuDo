@@ -106,6 +106,7 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | Policy | Unitree G1 | Unitree H1 | FFTAI gr1t1 | Ref | Doc | Feature & Note |
 |:-------:|:--------:|:-------:|:-------:|:-------:|:-------:|:-------:|
 | Unitree Official | 🖥️ 🤖 | 🖥️ 🤖 | - | [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreePolicy](./docs/policy.md/#policy--unitreepolicy)|  |
+| Unitree Wo Gait | 🖥️ 🤖 | - | - | [unitree_rl_lab](https://github.com/unitreerobotics/unitree_rl_gym) | [UnitreeWoGaitPolicy](./docs/policy.md/#unitreewogaitpolicy)| no gait |
 | Human2Humanoid | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ | [H2H](https://github.com/LeCAR-Lab/human2humanoid) | [H2HStudentPolicy](./docs/policy.md/#policy--h2hstudentpolicy) | Need PHC submodule |
 | Smooth | 🖥️ 🤖 | 🖥️ 🤖 | 🖥️ 🤖⚠️ | [Smooth](https://github.com/zixuan417/smooth-humanoid-locomotion) |  |
 | AMO | 🖥️ 🤖 | - | - | [AMO](https://github.com/OpenTeleVision/AMO) | [AmoPolicy](./docs/policy.md/#policy--amopolicy) |  |
