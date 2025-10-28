@@ -22,7 +22,7 @@ from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg, G1K
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
 from .policy.g1_h2h_policy_cfg import G1H2HPolicyCfg  # noqa: F401
 from .policy.g1_smooth_policy_cfg import G1SmoothPolicyCfg  # noqa: F401
-from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg  # noqa: F401
+from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg, G1UnitreeWoGaitPolicyCfg  # noqa: F401
 
 # ================= LocoMotion + MotionMimic Policy Switch Configs ================= #
 
@@ -59,8 +59,9 @@ class g1_locomimic_beyondmimic(G1RlLocoMimicPipelineCfg):
     ]
 
     loco_policy: G1AmoPolicyCfg = G1AmoPolicyCfg()
-    # policy: G1AsapLocoPolicyCfg = G1AsapLocoPolicyCfg()
-    # policy: G1UnitreePolicyCfg = G1UnitreePolicyCfg()
+    # loco_policy: G1AsapLocoPolicyCfg = G1AsapLocoPolicyCfg()
+    # loco_policy: G1UnitreePolicyCfg = G1UnitreePolicyCfg()
+    # loco_policy: G1UnitreeWoGaitPolicyCfg = G1UnitreeWoGaitPolicyCfg()
     """Any LocoMotion policy, as init"""
 
     mimic_policies: list[G1BeyondMimicPolicyCfg] = [

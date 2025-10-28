@@ -2,7 +2,7 @@ import numpy as np
 
 from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
 from robojudo.policy import Policy, policy_registry
-from robojudo.policy.policy_cfgs import UnitreePolicyCfg
+from robojudo.policy.policy_cfgs import UnitreePolicyCfg, UnitreeWoGaitPolicyCfg
 from robojudo.utils.util_func import command_remap, get_gravity_orientation
 
 
@@ -13,19 +13,16 @@ class UnitreePolicy(Policy):
     def __init__(self, cfg_policy, device):
         super().__init__(cfg_policy=cfg_policy, device=device)
 
-        self.scales_ang_vel = self.cfg_policy.obs_scales.ang_vel
-        self.scales_dof_vel = self.cfg_policy.obs_scales.dof_vel
-        self.comand_scales = self.cfg_policy.obs_scales.command
+        self.obs_scales = self.cfg_policy.obs_scales
         self.max_cmd = self.cfg_policy.max_cmd
         self.commands_map = self.cfg_policy.commands_map
-
-        self.n_priv_latent = 4 + 1 + (self.num_dofs) * 2 + 3
-        self._init_history(np.zeros(self.history_obs_size))
 
         self.reset()
 
     def reset(self):
         self.timestep: int = 0
+
+        self._init_history(np.zeros(self.history_obs_size))
 
     def post_step_callback(self, commands=None):
         self.timestep += 1
@@ -77,11 +74,11 @@ class UnitreePolicy(Policy):
         gravity_orientation = get_gravity_orientation(env_data.base_quat)
         obs = np.concatenate(
             [
-                env_data.base_ang_vel * self.scales_ang_vel,
+                env_data.base_ang_vel * self.obs_scales.ang_vel,
                 gravity_orientation,
-                commands * self.comand_scales * self.max_cmd,
+                commands * self.obs_scales.command * self.max_cmd,
                 env_data.dof_pos - self.default_dof_pos,
-                env_data.dof_vel * self.scales_dof_vel,
+                env_data.dof_vel * self.obs_scales.dof_vel,
                 self.last_action,
                 sin_pos,
                 cos_pos,
@@ -128,3 +125,40 @@ class UnitreePolicy(Policy):
             horizontal_only=True,
             id=2,
         )
+
+
+@policy_registry.register
+class UnitreeWoGaitPolicy(UnitreePolicy):
+    cfg_policy: UnitreeWoGaitPolicyCfg
+
+    def __init__(self, cfg_policy, device):
+        super().__init__(cfg_policy=cfg_policy, device=device)
+
+    def reset(self):
+        self.timestep: int = 0
+
+        history_obs_dims = self.cfg_policy.history_obs_dims
+        default_history = [np.zeros(dim, dtype=np.float32) for dim in history_obs_dims.values()]
+        self._init_history(default_history)
+
+    def get_observation(self, env_data, ctrl_data):
+        commands = self._get_commands(ctrl_data)
+
+        gravity_orientation = get_gravity_orientation(env_data.base_quat)
+        obs_current = [
+            env_data.base_ang_vel * self.obs_scales.ang_vel,
+            gravity_orientation * self.obs_scales.gravity,
+            commands * self.obs_scales.command * self.max_cmd,
+            (env_data.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+            env_data.dof_vel * self.obs_scales.dof_vel,
+            self.last_action,
+        ]
+        self.history_buf.append(obs_current)
+
+        history_list = [np.concatenate(items, axis=0) for items in zip(*self.history_buf, strict=True)]
+        obs = np.concatenate(history_list, axis=0)
+
+        extras = {
+            "commands": commands,
+        }
+        return obs, extras

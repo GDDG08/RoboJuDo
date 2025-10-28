@@ -61,7 +61,7 @@ class UnitreePolicyCfg(PolicyCfg):
         command: list[float] = [2.0, 2.0, 0.25]
 
     policy_type: str = "UnitreePolicy"
-    policy_name: str = "motion"
+    policy_name: str = "policy"
 
     @property
     def policy_file(self) -> str:
@@ -71,6 +71,39 @@ class UnitreePolicyCfg(PolicyCfg):
     action_scale: float = 0.25
     action_clip: float | None = None
     action_beta: float = 0.8
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+    max_cmd: list[float] = [0.8, 0.5, 1.57]
+    commands_map: list[list[float]] = [
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0],
+        [1.0, 0.0, -1.0],
+    ]
+
+
+class UnitreeWoGaitPolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        ang_vel: float = 0.2
+        gravity: float = 1.0
+        dof_pos: float = 1.0
+        dof_vel: float = 0.05
+        command: list[float] = [1.0, 1.0, 1.0]
+
+    policy_type: str = "UnitreeWoGaitPolicy"
+    policy_name: str = "policy_wo_gait"
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/unitree/{self.policy_name}.pt"
+        return policy_file.as_posix()
+
+    action_scale: float = 0.25
+    action_clip: float | None = None
+    action_beta: float = 1.0
+
+    history_length: int = 5  # number of history observations to use
+    history_obs_dims: dict[str, int] = {}
 
     # ======= POLICY SPECIFIC CONFIGURATION =======
     obs_scales: ObsScalesCfg = ObsScalesCfg()
