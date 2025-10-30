@@ -8,7 +8,7 @@ import numpy as np
 from robojudo.environment import Environment, env_registry
 from robojudo.environment.env_cfgs import MujocoEnvCfg
 from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
-from robojudo.utils.util_func import quatToEuler
+from robojudo.utils.util_func import quat_rotate_inverse_np, quatToEuler
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +101,8 @@ class MujocoEnv(Environment):
 
         if self.born_place_align:
             quat, base_pos = self.base_align.align_transform(quat, base_pos)
-            lin_vel = self.base_align.align_xyz(lin_vel)
 
+        lin_vel = quat_rotate_inverse_np(quat, lin_vel)
         rpy = quatToEuler(quat)
 
         self._base_rpy = rpy.copy()

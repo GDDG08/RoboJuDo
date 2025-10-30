@@ -31,11 +31,11 @@ class Environment(ABC):
         self._base_rpy = np.zeros(3)
         self._base_quat = np.array([0.0, 0.0, 0.0, 1.0])  # as x, y, z, w
         self._base_ang_vel = np.zeros(3)
-        self._base_lin_acc = np.zeros(3)
 
         # optional variables, may not be available in all envs
         self._base_pos: np.ndarray | None = None
         self._base_lin_vel: np.ndarray | None = None
+        self._base_lin_acc: np.ndarray | None = None
         self._torso_pos: np.ndarray | None = None
         self._torso_quat: np.ndarray | None = None
         self._torso_ang_vel: np.ndarray | None = None
@@ -129,10 +129,6 @@ class Environment(ABC):
     def base_ang_vel(self):
         return self._base_ang_vel.copy()
 
-    @property
-    def base_lin_acc(self):
-        return self._base_lin_acc.copy()
-
     # == Optional Properties ==
     @property
     def base_pos(self):
@@ -141,6 +137,10 @@ class Environment(ABC):
     @property
     def base_lin_vel(self):
         return self._base_lin_vel.copy() if self._base_lin_vel is not None else None
+
+    @property
+    def base_lin_acc(self):
+        return self._base_lin_acc.copy() if self._base_lin_acc is not None else None
 
     @property
     def torso_pos(self):

@@ -35,7 +35,7 @@ from robojudo.environment.utils.unitree_command import (
 from robojudo.environment.utils.unitree_rotation import transform_imu_data
 from robojudo.tools.retarget import HandRetarget
 from robojudo.utils.rotation import TransformAlignment
-from robojudo.utils.util_func import calc_heading_quat_np
+from robojudo.utils.util_func import calc_heading_quat_np, quat_rotate_inverse_np
 
 logger = logging.getLogger(__name__)
 
@@ -198,22 +198,6 @@ class UnitreeEnv(Environment):
         self.low_state = msg
 
     def update(self):
-        # odometry
-        if self._odometry_type == "ZED":
-            self.zed_odometry.update()
-            if self.zed_odometry.is_valid:
-                self._base_pos = self.zed_odometry.pos
-                self._lin_vel = self.zed_odometry.lin_vel
-        elif self._odometry_type == "DUMMY":
-            self._base_pos = np.array([0.0, 0.0, 0.8])
-            self._base_lin_vel = np.array([0.0, 0.0, 0.0])
-        elif self._odometry_type == "UNITREE":
-            base_pos = np.asarray(self.sport_state.position, dtype=np.float32)
-            lin_vel = np.asarray(self.sport_state.velocity, dtype=np.float32)
-            if self.born_place_align:
-                self._base_pos = self.base_align.align_pos(base_pos)
-                self._base_lin_vel = self.base_align.align_xyz(lin_vel)
-
         # robot state
         dof_pos = []
         dof_vel = []
@@ -232,7 +216,7 @@ class UnitreeEnv(Environment):
         self._dof_vel = dof_vel
 
         if self.robot == "g1":
-            quat = np.asarray(self.low_state.imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
+            quat = np.array(self.low_state.imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
             ang_vel = np.array(self.low_state.imu_state.gyroscope, dtype=np.float32)
             rpy = np.array(self.low_state.imu_state.rpy, dtype=np.float32)
 
@@ -243,16 +227,10 @@ class UnitreeEnv(Environment):
             self._base_ang_vel = ang_vel
             self._base_rpy = rpy
 
-            if self.update_with_fk:
-                fk_info = self.fk()
-                self._torso_quat = fk_info[self._torso_name]["quat"]
-                self._torso_ang_vel = fk_info[self._torso_name]["ang_vel"]
-                self._torso_pos = fk_info[self._torso_name]["pos"]
-
         elif self.robot == "h1":
             # h1 imu is on the torso
             # imu data needs to be transformed to the pelvis frame
-            torso_quat = np.asarray(self.low_state.imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
+            torso_quat = np.array(self.low_state.imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
             torso_ang_vel = np.array(self.low_state.imu_state.gyroscope, dtype=np.float32)
 
             if self.born_place_align:
@@ -275,10 +253,32 @@ class UnitreeEnv(Environment):
             self._base_ang_vel = base_ang_vel
             self._base_rpy = sRot.from_quat(base_quat, scalar_first=True).as_euler("xyz")
 
-            if self.update_with_fk:
-                fk_info = self.fk()
-                self._torso_pos = fk_info[self._torso_name]["pos"]
+        # odometry
+        if self._odometry_type == "ZED":
+            self.zed_odometry.update()
+            if self.zed_odometry.is_valid:
+                # born place aligned in zed_odometry
+                self._base_pos = self.zed_odometry.pos
+                self._lin_vel = self.zed_odometry.lin_vel
+        elif self._odometry_type == "DUMMY":
+            self._base_pos = np.array([0.0, 0.0, 0.8])
+            self._base_lin_vel = np.array([0.0, 0.0, 0.0])
+        elif self._odometry_type == "UNITREE":
+            base_pos = np.array(self.sport_state.position, dtype=np.float32)
+            lin_vel = np.array(self.sport_state.velocity, dtype=np.float32)
+            self._base_lin_vel = quat_rotate_inverse_np(self.base_quat, lin_vel)
+            if self.born_place_align:
+                self._base_pos = self.base_align.align_pos(base_pos)
 
+        # FK
+        if self.update_with_fk:
+            fk_info = self.fk()
+            self._torso_pos = fk_info[self._torso_name]["pos"]
+            if self.robot != "h1":
+                self._torso_quat = fk_info[self._torso_name]["quat"]
+                self._torso_ang_vel = fk_info[self._torso_name]["ang_vel"]
+
+        # controller
         if self.RemoteControllerHandler:
             self.RemoteControllerHandler(self.low_state.wireless_remote)
 

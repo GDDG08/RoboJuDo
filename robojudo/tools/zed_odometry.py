@@ -6,6 +6,7 @@ from zed_proxy import ZedOdometryProxy
 
 from robojudo.tools.tool_cfgs import ZedOdometryCfg
 from robojudo.utils.rotation import TransformAlignment
+from robojudo.utils.util_func import quat_rotate_inverse_np
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,7 @@ class ZedOdometry:
 
         if lin_vel := self.staus_data.get("vel_xyz_world", None):
             _lin_vel = np.array(lin_vel)
-            if self.cfg.zero_align:
-                _lin_vel = self.zero_align.align_xyz(_lin_vel)
-            self._lin_vel = _lin_vel
+            self._lin_vel = quat_rotate_inverse_np(self._quat, _lin_vel)
 
     @property
     def is_valid(self):
