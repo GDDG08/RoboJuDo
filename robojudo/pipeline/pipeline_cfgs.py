@@ -30,6 +30,13 @@ class RlPipelineCfg(PipelineCfg):
     ctrl: list[CtrlCfg | Any] = []
     policy: PolicyCfg | Any
 
+    # ===== Extra Config =====
+    do_safety_check: bool = False
+    """
+    If True, perform safety check after each step.
+    We recommend enabling this, however if motion is very aggressive, you may disable it.
+    """
+
 
 class RlMultiPolicyPipelineCfg(PipelineCfg):
     pipeline_type: str = "RlMultiPolicyPipeline"

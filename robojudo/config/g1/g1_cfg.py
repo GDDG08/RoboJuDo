@@ -69,6 +69,8 @@ class g1_real(g1):
         UnitreeCtrlCfg(),
     ]
 
+    do_safety_check: bool = True  # enable safety check for real robot
+
 
 @cfg_registry.register
 class g1_switch(RlMultiPolicyPipelineCfg):

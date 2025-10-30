@@ -58,6 +58,8 @@ class h1_real(h1):
         UnitreeCtrlCfg(),
     ]
 
+    do_safety_check: bool = True  # enable safety check for real robot
+
 
 @cfg_registry.register
 class h1_switch(RlMultiPolicyPipelineCfg):

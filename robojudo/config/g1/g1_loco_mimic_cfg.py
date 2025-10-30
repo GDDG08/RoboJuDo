@@ -152,6 +152,8 @@ class g1_locomimic_beyondmimic_real(g1_locomimic_beyondmimic):
         ),
     ]
 
+    do_safety_check: bool = True  # enable safety check for real robot
+
 
 @cfg_registry.register
 class g1_locomimic_asap_real(g1_locomimic_asap):
@@ -179,6 +181,8 @@ class g1_locomimic_asap_real(g1_locomimic_asap):
             },
         ),
     ]
+
+    do_safety_check: bool = True  # enable safety check for real robot
 
 
 # ================= ASAP Policy  ================= #
