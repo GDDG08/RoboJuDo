@@ -84,7 +84,6 @@ class RlPipeline(Pipeline):
 
         self.freq = self.cfg.policy.freq
         self.dt = 1.0 / self.freq
-        self.do_safety_check = self.cfg.do_safety_check
 
         self.self_check()
         self.reset()

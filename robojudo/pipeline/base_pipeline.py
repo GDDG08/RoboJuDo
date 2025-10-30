@@ -29,6 +29,7 @@ class Pipeline(ABC):
 
         self.dt = 1.0 / 50  # default
         self.timestep = 0
+        self.do_safety_check = self.cfg.do_safety_check
 
     @abstractmethod
     def step(self):
@@ -37,3 +38,6 @@ class Pipeline(ABC):
     @abstractmethod
     def prepare(self):
         raise NotImplementedError
+
+    def safety_check(self):
+        return

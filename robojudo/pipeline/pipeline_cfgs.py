@@ -19,6 +19,12 @@ class PipelineCfg(Config):
     run_fullspeed: bool = False
     """If True, run the pipeline at full speed, ignoring the desired frequency"""
 
+    do_safety_check: bool = False
+    """
+    If True, perform safety check after each step.
+    We recommend enabling this, however if motion is very aggressive, you may disable it.
+    """
+
 
 class RlPipelineCfg(PipelineCfg):
     pipeline_type: str = "RlPipeline"
@@ -29,13 +35,6 @@ class RlPipelineCfg(PipelineCfg):
     env: EnvCfg | Any
     ctrl: list[CtrlCfg | Any] = []
     policy: PolicyCfg | Any
-
-    # ===== Extra Config =====
-    do_safety_check: bool = False
-    """
-    If True, perform safety check after each step.
-    We recommend enabling this, however if motion is very aggressive, you may disable it.
-    """
 
 
 class RlMultiPolicyPipelineCfg(PipelineCfg):
