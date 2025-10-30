@@ -210,14 +210,14 @@ class unitreeRemoteController:
             "Down",
             "Left",
         ]
-        self.last_button_state = np.zeros((16), dtype=np.bool)
+        self.last_button_state = np.zeros((16), dtype=bool)
 
     def parse(self, remoteData):
         now = time.time()
         # button
         keys = struct.unpack("H", remoteData[2:4])[0]
         button = [((keys & (1 << i)) >> i) for i in range(16)]
-        button_state = np.array(button, dtype=np.bool)
+        button_state = np.array(button, dtype=bool)
 
         # Check for button state changes
         changed = button_state != self.last_button_state

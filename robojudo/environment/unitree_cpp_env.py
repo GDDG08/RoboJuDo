@@ -18,9 +18,9 @@ class UnitreeCppEnv(Environment):
     cfg_env: UnitreeEnvCfg
 
     def __init__(self, cfg_env: UnitreeEnvCfg, device="cpu"):
+        self.enabled: bool = cfg_env.act
         super().__init__(cfg_env=cfg_env, device=device)
         self.RemoteControllerHandler = None
-        self.enabled: bool = cfg_env.act
 
         cfg_unitree: UnitreeEnvCfg.UnitreeCfg = cfg_env.unitree
 
