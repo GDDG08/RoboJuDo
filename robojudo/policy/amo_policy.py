@@ -100,7 +100,7 @@ class AMOPolicy(Policy):
                 commands[0] = command_remap(ly, self.commands_map[0])
                 commands[1] = command_remap(rx, self.commands_map[1])
                 commands[2] = command_remap(lx, self.commands_map[2])
-                commands[3] = command_remap(ry, self.commands_map[3])
+                # commands[3] = command_remap(ry, self.commands_map[3]) # height
 
                 button_event = ctrl_data[key]["button_event"]
                 for event in button_event:
@@ -119,11 +119,19 @@ class AMOPolicy(Policy):
         base_ang_vel = env_data.base_ang_vel
 
         rpy = quatToEuler(base_quat)
-        self.target_yaw = self.cmd[1]
-        dyaw = rpy[2] - self.target_yaw
+
+        # INFO: legacy code from official repo
+        # self._in_place_stand_flag = np.abs(self.cmd[0]) < 0.1
+        # self.target_yaw = self.cmd[1]
+        # dyaw = rpy[2] - self.target_yaw
+        # dyaw = np.remainder(dyaw + np.pi, 2 * np.pi) - np.pi
+        # if self._in_place_stand_flag:
+        #     dyaw = 0.0
+
+        # INFO: new logic for better control
+        self._in_place_stand_flag = np.all(np.abs(self.cmd[0:3]) < 0.1)
+        dyaw = -self.cmd[1]
         dyaw = np.remainder(dyaw + np.pi, 2 * np.pi) - np.pi
-        if self._in_place_stand_flag:
-            dyaw = 0.0
 
         obs_dof_vel = dof_vel.copy()
         obs_dof_vel[[4, 5, 10, 11, 13, 14]] = 0.0
@@ -165,7 +173,6 @@ class AMOPolicy(Policy):
         obs_demo[: self._n_demo_dof] = dof_pos[15:]
         obs_demo[self._n_demo_dof] = self.cmd[0]
         obs_demo[self._n_demo_dof + 1] = self.cmd[2]
-        self._in_place_stand_flag = np.abs(self.cmd[0]) < 0.1
         obs_demo[self._n_demo_dof + 3] = self.cmd[4]
         obs_demo[self._n_demo_dof + 4] = self.cmd[5]
         obs_demo[self._n_demo_dof + 5] = self.cmd[6]

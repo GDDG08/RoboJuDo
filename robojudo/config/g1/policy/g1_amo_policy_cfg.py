@@ -162,8 +162,8 @@ class G1AmoPolicyCfg(AMOPolicyCfg):
     action_dof: DoFConfig = G1AmoLowerDoF()
 
     commands_map: list[list[float]] = [
-        [-1.0, 0.0, 1.0],
-        [1.0, 0.0, -1.0],
-        [1.0, 0.0, -1.0],
-        [0.3, 0.75, 0.9],
+        [-1.0, 0.0, 1.0],  # vel_y
+        [0.2, 0.0, -0.2],  # ang_z
+        [0.8, 0.0, -0.8],  # vel_x
+        [0.3, 0.75, 0.9],  # height
     ]

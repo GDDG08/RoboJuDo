@@ -293,7 +293,7 @@ python scripts/run_pipeline.py -c g1_switch
 Xbox Controller:
 
 - `left axes` move forward/backward/left/right
-- `right axes(for/back)` stand higher/squat
+<!-- - `right axes(for/back)` stand higher/squat -->
 - `right axes(left/right)` turn left/right
 
 Switch between Unitree Policy and AMO Policy:

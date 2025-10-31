@@ -82,17 +82,17 @@ class g1_switch(RlMultiPolicyPipelineCfg):
     env: G1MujocoEnvCfg = G1MujocoEnvCfg()
 
     ctrl: list[KeyboardCtrlCfg | JoystickCtrlCfg] = [
-        KeyboardCtrlCfg(
-            triggers_extra={
-                "Key.tab": "[POLICY_TOGGLE]",
-            }
-        ),
-        # JoystickCtrlCfg(
+        # KeyboardCtrlCfg(
         #     triggers_extra={
-        #         "RB+Down": "[POLICY_SWITCH],0",
-        #         "RB+Up": "[POLICY_SWITCH],1",
+        #         "Key.tab": "[POLICY_TOGGLE]",
         #     }
         # ),
+        JoystickCtrlCfg(
+            triggers_extra={
+                "RB+Down": "[POLICY_SWITCH],0",
+                "RB+Up": "[POLICY_SWITCH],1",
+            }
+        ),
     ]
 
     policies: list[G1UnitreePolicyCfg | G1AmoPolicyCfg] = [
