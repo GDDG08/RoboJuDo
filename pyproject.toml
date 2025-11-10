@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RoboJuDo"
-version = "1.4.2"
+version = "1.5.0"
 description = "RoboJuDo: A plug-and-play deploy framework for robots. Just deploy, just do."
 authors = [
     { name = "HansZ8", email = "GDDG80@outlook.com" }
