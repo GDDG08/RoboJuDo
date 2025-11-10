@@ -195,8 +195,9 @@ For TwistPolicy, we implement two motion source controllers:
     - get motion from redis server, which is used in the original repo.
     - it works with the motion server like [server_high_level_motion_lib.py](https://github.com/YanjieZe/TWIST/blob/42d8c134739eee51f28d7cc0ff72a86728afb8dc/deploy_real/server_high_level_motion_lib.py)
 
-- `MotionTwistCtrl` at [motion_twist_ctrl.py](../robojudo/controller/motion_twist_ctrl.py): get motion from local .pkl files. 
-    - This is base on the PHC MotionLib, and **uses the same motion format as PHC**. 
+- `MotionTwistCtrl` at [motion_twist_ctrl.py](../robojudo/controller/motion_twist_ctrl.py): 
+    - get motion from local .pkl files. 
+    - this is base on the PHC MotionLib, and **uses the same motion format as PHC**. 
         - PHC Submodule is needed. check [README](../README.md#2️⃣-install-optional-modules).
     - motions from [PBHC](https://github.com/TeleHuman/PBHC) pipeline is supported,  put your motion files in `assets/motions/g1/phc/`.
 
