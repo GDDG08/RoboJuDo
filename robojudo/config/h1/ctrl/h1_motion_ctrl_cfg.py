@@ -1,10 +1,10 @@
-from robojudo.controller.ctrl_cfgs import MotionCtrlCfg
+from robojudo.controller.ctrl_cfgs import MotionH2HCtrlCfg
 
 
-class H1MotionCtrlCfg(MotionCtrlCfg):
+class H1MotionH2HCtrlCfg(MotionH2HCtrlCfg):
     # ==== policy specific configs ====
     track_keypoints_names: list[str] = []
-    phc: MotionCtrlCfg.PhcCfg = MotionCtrlCfg.PhcCfg(
+    phc: MotionH2HCtrlCfg.PhcCfg = MotionH2HCtrlCfg.PhcCfg(
         robot_config_file="robot/unitree_h1.yaml",
     )
 

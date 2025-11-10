@@ -9,7 +9,7 @@ from robojudo.pipeline.pipeline_cfgs import (
     RlPipelineCfg,  # noqa: F401
 )
 
-from .ctrl.h1_motion_ctrl_cfg import H1MotionCtrlCfg  # noqa: F401
+from .ctrl.h1_motion_ctrl_cfg import H1MotionH2HCtrlCfg  # noqa: F401
 from .env.h1_dummy_env_cfg import H1DummyEnvCfg  # noqa: F401
 from .env.h1_mujuco_env_cfg import H1MujocoEnvCfg  # noqa: F401
 from .env.h1_real_env_cfg import H1RealEnvCfg  # noqa: F401

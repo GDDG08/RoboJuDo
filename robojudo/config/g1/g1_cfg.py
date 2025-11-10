@@ -4,7 +4,6 @@ from robojudo.controller.ctrl_cfgs import (
     KeyboardCtrlCfg,  # noqa: F401
     UnitreeCtrlCfg,  # noqa: F401
 )
-from robojudo.environment.env_cfgs import UnitreeEnvCfg  # noqa: F401
 from robojudo.pipeline.pipeline_cfgs import (
     RlLocoMimicPipelineCfg,  # noqa: F401
     RlMultiPolicyPipelineCfg,  # noqa: F401

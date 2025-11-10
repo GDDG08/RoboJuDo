@@ -9,7 +9,7 @@ from robojudo.pipeline.pipeline_cfgs import (
     RlPipelineCfg,  # noqa: F401
 )
 
-from .ctrl.h1_motion_ctrl_cfg import H1MotionCtrlCfg  # noqa: F401
+from .ctrl.h1_motion_ctrl_cfg import H1MotionH2HCtrlCfg  # noqa: F401
 from .env.h1_dummy_env_cfg import H1DummyEnvCfg  # noqa: F401
 from .env.h1_mujuco_env_cfg import H1MujocoEnvCfg  # noqa: F401
 from .env.h1_real_env_cfg import H1RealEnvCfg, H1UnitreeCfg  # noqa: F401
@@ -97,9 +97,9 @@ class h1_h2h(RlPipelineCfg):
     robot: str = "h1"
     env: H1MujocoEnvCfg = H1MujocoEnvCfg()
 
-    ctrl: list[KeyboardCtrlCfg | H1MotionCtrlCfg] = [
+    ctrl: list[KeyboardCtrlCfg | H1MotionH2HCtrlCfg] = [
         KeyboardCtrlCfg(),
-        H1MotionCtrlCfg(),
+        H1MotionH2HCtrlCfg(),
     ]
 
     policy: H1H2HPolicyCfg = H1H2HPolicyCfg()
