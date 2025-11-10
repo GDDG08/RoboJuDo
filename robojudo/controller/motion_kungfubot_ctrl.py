@@ -7,7 +7,6 @@ import torch
 from robojudo.controller import ctrl_registry
 from robojudo.controller.ctrl_cfgs import MotionKungfuBotCtrlCfg
 from robojudo.controller.motion_ctrl import MotionCtrl
-from robojudo.environment import Environment
 from robojudo.utils.util_func_torch import (
     get_euler_xyz_in_tensor,
     quat_apply,
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 @ctrl_registry.register
 class MotionKungfuBotCtrl(MotionCtrl):
     cfg_ctrl: MotionKungfuBotCtrlCfg
-    env: Environment
 
     def __init__(self, cfg_ctrl, env, device="cpu"):
         super().__init__(cfg_ctrl=cfg_ctrl, env=env, device=device)

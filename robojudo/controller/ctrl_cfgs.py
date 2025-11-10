@@ -116,6 +116,13 @@ class MotionKungfuBotCtrlCfg(MotionCtrlCfg):
     future_num_steps: int = 20
 
 
+class MotionTwistCtrlCfg(MotionCtrlCfg):
+    ctrl_type: str = "MotionTwistCtrl"
+
+    # ==== motion config ====
+    robot: str
+
+
 class BeyondMimicCtrlCfg(CtrlCfg):
     ctrl_type: str = "BeyondMimicCtrl"
 
@@ -140,3 +147,14 @@ class BeyondMimicCtrlCfg(CtrlCfg):
         """from beyondmimic asset, used for indexing"""
 
     motion_cfg: MotionCommandCfg
+
+
+class TwistRedisCtrlCfg(CtrlCfg):
+    ctrl_type: str = "TwistRedisCtrl"
+
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_key: str = "action_mimic_g1"  # key to get command data from redis
+
+    buffer_size: int = 5  # size of the data buffer to store recent commands

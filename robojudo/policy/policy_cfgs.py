@@ -386,3 +386,44 @@ class KungfuBotGeneralPolicyCfg(PolicyCfg):
 
     future_max_steps: int = 95
     future_num_steps: int = 20
+
+
+class TwistPolicyCfg(PolicyCfg):
+    class ObsScalesCfg(Config):
+        ang_vel: float = 0.25
+        dof_vel: float = 0.05
+        dof_pos: float = 1.0
+
+    policy_type: str = "TwistPolicy"
+    policy_name: str
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/twist/{self.policy_name}.pt"
+        return policy_file.as_posix()
+
+    action_scale: float = 0.5
+    action_clip: float | None = 10.0
+    action_beta: float = 1.0
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    obs_scales: ObsScalesCfg = ObsScalesCfg()
+
+    history_length: int = 10
+
+    @property
+    def n_mimic_obs(self) -> int:
+        return self.action_dof.num_dofs + 8
+
+    @property
+    def history_obs_size(self) -> int:
+        history_obs_size = self.n_mimic_obs + 3 + 2 + 3 * self.action_dof.num_dofs
+        return history_obs_size
+
+    ankle_idx: list[int]
+    mimic_obs_total_degrees: int
+    mimic_obs_wrist_ids: list[int]
+
+    @property
+    def mimic_obs_other_ids(self) -> list[int]:
+        return [f for f in range(self.mimic_obs_total_degrees) if f not in self.mimic_obs_wrist_ids]
