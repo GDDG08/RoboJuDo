@@ -7,6 +7,8 @@ from robojudo.utils.util_func import quatToEuler
 
 @policy_registry.register
 class TwistPolicy(Policy):
+    """From [TWIST](https://github.com/YanjieZe/TWIST)"""
+
     cfg_policy: TwistPolicyCfg
 
     def __init__(self, cfg_policy, device):

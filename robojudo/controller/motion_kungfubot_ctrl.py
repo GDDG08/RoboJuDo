@@ -27,22 +27,13 @@ class MotionKungfuBotCtrl(MotionCtrl):
         self.future_max_steps = self.cfg_ctrl.future_max_steps
         self.future_num_steps = self.cfg_ctrl.future_num_steps
 
-        self.anchor_index = 0  # root
-        self.key_body_id = [4, 6, 10, 12, 19, 23, 24, 25, 26]
+        self.anchor_index = self.cfg_ctrl.anchor_index
+        self.key_body_id = self.cfg_ctrl.key_body_id
 
         self.dt = 0.02
         self.play_speed_ratio = 1.0
         self.speed_target = 1.0
 
-        # self._obs_future_motion_root_height = torch.zeros(1, dtype=torch.float32)
-        # self._obs_future_motion_roll_pitch = torch.zeros(2, dtype=torch.float32)
-        # self._obs_future_motion_base_lin_vel = torch.zeros(3, dtype=torch.float32)
-        # self._obs_future_motion_base_ang_vel = torch.zeros(3, dtype=torch.float32)
-        # self._obs_future_motion_base_yaw_vel = torch.zeros(1, dtype=torch.float32)
-        # self._obs_future_motion_dof_pos = torch.zeros(23, dtype=torch.float32)
-        # self._obs_future_motion_local_ref_rigid_body_pos = torch.zeros(27 * 3, dtype=torch.float32)
-        # self._obs_future_motion_local_ref_key_body_pos = torch.zeros(9 * 3, dtype=torch.float32)
-        # self._obs_next_step_ref_motion = torch.zeros(111, dtype=torch.float32)
         self._get_future_motion_targets()
 
     def post_step_callback(self, commands: list[str] | None = None):

@@ -15,10 +15,12 @@ We provide the following policies:
 - [HugWBCPolicy](#policy--hugwbcpolicy)
 - [BeyondMimicPolicy](#policy--beyondmimicpolicy)
 - [ASAPPolicy](#policy--asappolicy)
+- [KungfuBotGeneralPolicy](#policy--kungfubotgeneralpolicy)
+- [TwistPolicy](#policy--twistpolicy)
 
 ## [Policy](#policy) > [UnitreePolicy](#policy--unitreepolicy)
 
-`UnitreePolicy` is the policy that controls the robot using the [Unitree official policy](https://github.com/unitreerobotics/unitree_rl_gym). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`UnitreePolicy` is the policy that controls the robot using the [Unitree official policy](https://github.com/unitreerobotics/unitree_rl_gym).
 
 script: [unitree_policy.py](../robojudo/policy/unitree_policy.py)
 
@@ -56,7 +58,7 @@ script: [unitree_policy.py](../robojudo/policy/unitree_policy.py)
 
 ## [Policy](#policy) > [AMOPolicy](#policy--amopolicy)
 
-`AMOPolicy` is the policy that controls the robot using the [AMO](https://github.com/OpenTeleVision/AMO). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`AMOPolicy` is the policy that controls the robot using the [AMO](https://github.com/OpenTeleVision/AMO).
 
 script: [amo_policy.py](../robojudo/policy/amo_policy.py)
 
@@ -76,13 +78,13 @@ You can apply your own controller to control the robot using `AMOPolicy`. Just s
 
 ## [Policy](#policy) > [H2HStudentPolicy](#policy--h2hstudentpolicy)
 
-`H2HStudentPolicy` is the policy that controls the robot using the [human2humanoid](https://github.com/LeCAR-Lab/human2humanoid). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`H2HStudentPolicy` is the policy that controls the robot using the [human2humanoid](https://github.com/LeCAR-Lab/human2humanoid).
 
 > PHC Submodule is needed for motionlib control. check README#setup.
 
 script: [h2hstudent_policy.py](../robojudo/policy/h2hstudent_policy.py)
 
-`H2HStudentPolicy` is controlled by `MotionCtrl`. check code [motion_ctrl.py](../robojudo/controller/motion_ctrl.py).
+`H2HStudentPolicy` is controlled by `MotionH2HCtrl`. check code [motion_h2h_ctrl.py](../robojudo/controller/motion_h2h_ctrl.py).
 
 For motion source:
 - `Unitree H1`: Simply use the motion retargeting pipeline from [human2humanoid](https://github.com/LeCAR-Lab/human2humanoid).
@@ -93,7 +95,7 @@ You can refer to `g1_h2h` config in [g1_cfg.py](../robojudo/config/g1/g1_cfg.py)
 
 ## [Policy](#policy) > [HugWBCPolicy](#policy--hugwbcpolicy)
 
-`HugWBCPolicy` is the policy that controls the robot using the [HugWBC](https://github.com/apexrl/HugWBC). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`HugWBCPolicy` is the policy that controls the robot using the [HugWBC](https://github.com/apexrl/HugWBC).
 
 script: [hugwbc_policy.py](../robojudo/policy/hugwbc_policy.py)
 
@@ -102,7 +104,7 @@ script: [hugwbc_policy.py](../robojudo/policy/hugwbc_policy.py)
 
 ## [Policy](#policy) > [BeyondMimicPolicy](#policy--beyondmimicpolicy)
 
-`BeyondMimicPolicy` is the policy that controls the robot using the [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`BeyondMimicPolicy` is the policy that controls the robot using the [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking).
 
 We support both `G1FlatEnvCfg` and `G1FlatWoStateEstimationEnvCfg`. 
 For motion source, you could use the motion inside onnx policy, or use `BeyondmimicCtrl` with npz files.
@@ -120,7 +122,9 @@ script: [beyondmimic_policy.py](../robojudo/policy/beyondmimic_policy.py)
 
 ## [Policy](#policy) > [AsapPolicy](#policy--asappolicy)
 
-`AsapPolicy` is the policy that controls the robot using the [ASAP](https://github.com/LeCAR-Lab/ASAP). It is a subclass of `Policy` and implements the interface defined in `Policy`.
+`AsapPolicy` is the policy that controls the robot using the [ASAP](https://github.com/LeCAR-Lab/ASAP).
+
+Also, [KungfuBot](https://github.com/TeleHuman/PBHC) is supported by `AsapPolicy`.
 
 RoboJuDo support both `deepmimic` and `decoupled_locomotion` of the official repo, implemeted as `AsapPolicy` and `AsapLocoPolicy`.
 
@@ -161,5 +165,39 @@ This example highlights the advantages of RoboJudo:
 - Flexible policy switching, with interpolation support.
 - Convenient external controller processing
 
-You can refer to `g1_asap` and `g1_asap_loco` in [g1_asap_cfg.py](../robojudo/config/g1/g1_asap_cfg.py) for test and details.
+You can refer to `g1_asap` and `g1_asap_loco` config in [g1_asap_cfg.py](../robojudo/config/g1/g1_asap_cfg.py) for test and details.
 
+## [Policy](#policy) > [KungfuBotGeneralPolicy](#policy--kungfubotgeneralpolicy)
+
+`KungfuBotGeneralPolicy` is the policy that controls the robot using the [PBHC](https://github.com/TeleHuman/PBHC)-KungfuBot2.
+
+To be noted, this is for **KungfuBot2** general model, for KungfuBot, please use [AsapPolicy](#policy--asappolicy).
+
+> PHC Submodule is needed for motionlib control. check [README](../README.md#2️⃣-install-optional-modules).
+
+script: [kungfubot_policy.py](../robojudo/policy/kungfubot_policy.py)
+
+- `KungfuBotGeneralPolicy` is controlled by `MotionKungfuBotCtrl`
+    - check code [motion_kungfubot_ctrl.py](../robojudo/controller/motion_kungfubot_ctrl.py).
+    - motions from PBHC pipeline are supported. Put your motion files in `assets/motions/g1/phc/kungfubot/`.
+
+You can refer to `g1_kungfubot2` config in [g1_cfg.py](../robojudo/config/g1/g1_cfg.py) for test and details.
+
+## [Policy](#policy) > [TwistPolicy](#policy--twistpolicy)
+
+`TwistPolicy` is the policy that controls the robot using the [TWIST](https://github.com/YanjieZe/TWIST).
+
+script: [twist_policy.py](../robojudo/policy/twist_policy.py)
+
+For TwistPolicy, we implement two motion source controllers:
+
+- `TwistRedisCtrl` at [twist_redis_ctrl.py](../robojudo/controller/twist_redis_ctrl.py): 
+    - get motion from redis server, which is used in the original repo.
+    - it works with the motion server like [server_high_level_motion_lib.py](https://github.com/YanjieZe/TWIST/blob/42d8c134739eee51f28d7cc0ff72a86728afb8dc/deploy_real/server_high_level_motion_lib.py)
+
+- `MotionTwistCtrl` at [motion_twist_ctrl.py](../robojudo/controller/motion_twist_ctrl.py): get motion from local .pkl files. 
+    - This is base on the PHC MotionLib, and **uses the same motion format as PHC**. 
+        - PHC Submodule is needed. check [README](../README.md#2️⃣-install-optional-modules).
+    - motions from [PBHC](https://github.com/TeleHuman/PBHC) pipeline is supported,  put your motion files in `assets/motions/g1/phc/`.
+
+You can refer to `g1_twist` config in [g1_cfg.py](../robojudo/config/g1/g1_cfg.py) for test and details.

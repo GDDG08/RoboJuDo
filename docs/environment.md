@@ -94,8 +94,8 @@ script: [unitree_env.py](../robojudo/environment/unitree_env.py)
 
 script: [unitree_cpp_env.py](../robojudo/environment/unitree_cpp_env.py)
 
-> [UnitreeCpp](https://github.com/GDDG08/unitree_cpp) is needed.
+> [UnitreeCpp](https://github.com/HansZ8/unitree_cpp) is needed.
 
-This environment is implemented with [UnitreeCpp](https://github.com/GDDG08/unitree_cpp). In our test onboard Unitree G1, `UnitreeCppEnv` is faster almost 100 times than `UnitreeEnv` in `step()`.
+This environment is implemented with [UnitreeCpp](https://github.com/HansZ8/unitree_cpp). In our test onboard Unitree G1, `UnitreeCppEnv` is faster almost 100 times than `UnitreeEnv` in `step()`.
 
 

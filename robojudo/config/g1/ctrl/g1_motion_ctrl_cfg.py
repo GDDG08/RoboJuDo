@@ -44,6 +44,8 @@ class G1MotionKungfuBotCtrlCfg(G1MotionCtrlCfg, MotionKungfuBotCtrlCfg):
         motion_path = ASSETS_DIR / f"motions/{self.robot}/phc/{self.motion_name}.pkl"
         return motion_path.as_posix()
 
+    key_body_id: list[int] = [4, 6, 10, 12, 19, 23, 24, 25, 26]
+
 
 class G1MotionTwistCtrlCfg(G1MotionCtrlCfg, MotionTwistCtrlCfg):
     ctrl_type: str = "MotionTwistCtrl"

@@ -115,6 +115,9 @@ class MotionKungfuBotCtrlCfg(MotionCtrlCfg):
     future_max_steps: int = 95
     future_num_steps: int = 20
 
+    anchor_index: int = 0  # root
+    key_body_id: list[int]
+
 
 class MotionTwistCtrlCfg(MotionCtrlCfg):
     ctrl_type: str = "MotionTwistCtrl"

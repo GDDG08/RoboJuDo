@@ -5,8 +5,8 @@
 
 <p>
   <!-- Version -->
-  <a href="https://github.com/GDDG08/RoboJuDo/releases">
-    <img src="https://img.shields.io/github/v/release/GDDG08/RoboJuDo?color=blue&label=version" alt="release"/>
+  <a href="https://github.com/HansZ8/RoboJuDo/releases">
+    <img src="https://img.shields.io/github/v/release/HansZ8/RoboJuDo?color=blue&label=version" alt="release"/>
   </a>
   <!-- Platforms -->
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Ubuntu-green" alt="platform"/>
@@ -34,7 +34,7 @@ Our framework highlights:
 
 - **Multi-policy switching**: Seamlessly switch between different policies during a task. Try this: [Multi-Policy Switching](#multi-policy-switch).
 
-- **Light-Weight**: Our framework is lightweight, after 5 minutes of setup, it runs smoothly onboard. By [UnitreeCpp](https://github.com/GDDG08/unitree_cpp), RoboJuDo runs on Unitree G1 without the need for an Ethernet cable.
+- **Light-Weight**: Our framework is lightweight, after 5 minutes of setup, it runs smoothly onboard. By [UnitreeCpp](https://github.com/HansZ8/unitree_cpp), RoboJuDo runs on Unitree G1 without the need for an Ethernet cable.
 
 
 # 📓Content
@@ -56,11 +56,13 @@ Our framework highlights:
 - [x] [2025.06] Integrated Unitree C++ SDK
 - [x] [2025.08] Add support for beyondmimic
 - [x] [2025.09] RoboJuDo Opensource 🎉
-- [x] [2025.10] Add support for **ASAP** ✨
+- [x] [2025.10] Add support for **ASAP**
   - [x] Implement `deepmimic` and `locomotion`, check [AsapPolicy](./docs/policy.md/#policy--asappolicy)!
   - [x] Preserve original keyboard and joystick mappings
   - [x] Support for **KungfuBot**
 - [x] Add policy-switch pipeline with interpolation, check [LocoMimic Example](#loco-mimic-policy-switch-with-interpolation)!
+- [x] [2025.11] Add support for **KungfuBot2** ✨, check [KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy)!
+- [x] [2025.11] Add support for **TWIST** ✨, check [TwistPolicy](./docs/policy.md/#policy--twistpolicy)!
 - [ ] Release code for **HugWBC**
 - [ ] Release code for **GMT**
 - [ ] Upcoming policies...
@@ -113,7 +115,9 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | GMT | 🖥️ 🤖 | - | - | [GMT](https://github.com/zixuan417/humanoid-general-motion-tracking) |  |  |
 | HugWBC | 🖥️ 🤖 | 🖥️ 🤖 | - | [HugWBC](https://github.com/apexrl/HugWBC) | [HugWbcPolicy](./docs/policy.md/#policy--hugwbcpolicy) |  |
 | **BeyondMimic** | 🖥️ 🤖 | - | - | [whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) | [BeyondmimicPolicy](./docs/policy.md/#policy--beyondmimicpolicy) | With&Wo SE supported |
-| **ASAP**<br>**KungfuBot** | 🖥️ 🤖 | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP)<br>[PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
+| **ASAP** | 🖥️ 🤖 | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
+| KungfuBot<br>**KungfuBot2** | 🖥️ 🤖 | - | - | [PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy)<br>[KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy) | Need PHC submodule |
+| **TWIST** | 🖥️ 🤖 | - | - | [TWIST](https://github.com/YanjieZe/TWIST) | [TwistPolicy](./docs/policy.md/#policy--twistpolicy) |  |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 
@@ -135,7 +139,7 @@ Robot onboard PCs are also supported.
 **Step 1: Clone the repository and create a Python environment**
 
 ```bash
-git clone https://github.com/GDDG08/RoboJuDo.git
+git clone https://github.com/HansZ8/RoboJuDo.git
 cd RoboJuDo/
 # Example using conda
 conda create -n robojudo python=3.11 -y
@@ -349,9 +353,9 @@ If you find our work useful, please cite our GitHub repository:
 
 ```bibtex
 @misc{RoboJuDo,
-  author = {Hans Zhuang, Dsixy},
+  author = {Hans Zhuang, Dsixy, artpli},
   title = {A plug-and-play deploy framework for robots. Just deploy, just do.},
-  url = {https://github.com/GDDG08/RoboJuDo},
+  url = {https://github.com/HansZ8/RoboJuDo},
   year = {2025}
 }
 ```
@@ -361,5 +365,5 @@ or star our repo😁
 
 - [Unitree SDK2 Python](https://github.com/unitreerobotics/unitree_sdk2_python): used for implementing `UnitreeEnv`.
 - [PHC](https://github.com/ZhengyiLuo/PHC): used for implementing the `MotionCtrl` module for OmniH2O.
-- [UnitreeCpp](https://github.com/GDDG08/unitree_cpp): our pybind of `unitree_sdk2` used in `UnitreeCppEnv`.
-- [ZED Proxy](https://github.com/GDDG08/ZED-Proxy/): ZED Camera Odometry Service.
+- [UnitreeCpp](https://github.com/HansZ8/unitree_cpp): our pybind of `unitree_sdk2` used in `UnitreeCppEnv`.
+- [ZED Proxy](https://github.com/HansZ8/ZED-Proxy/): ZED Camera Odometry Service.

@@ -267,10 +267,14 @@ class g1_kungfubot2(RlPipelineCfg):
     env: G1MujocoEnvCfg = G1MujocoEnvCfg()
     ctrl: list[KeyboardCtrlCfg | G1MotionKungfuBotCtrlCfg] = [
         KeyboardCtrlCfg(),
-        G1MotionKungfuBotCtrlCfg(),
+        G1MotionKungfuBotCtrlCfg(
+            motion_name="kungfubot/Horse-stance_pose",  # put motion files in assets/motions/g1/phc/kungfubot
+        ),
     ]
 
-    policy: G1KungfuBotGeneralPolicyCfg = G1KungfuBotGeneralPolicyCfg()
+    policy: G1KungfuBotGeneralPolicyCfg = G1KungfuBotGeneralPolicyCfg(
+        policy_name="horse_test_43000"  # this is a test model trained with only one motion
+    )
 
 
 @cfg_registry.register

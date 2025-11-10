@@ -384,9 +384,6 @@ class KungfuBotGeneralPolicyCfg(PolicyCfg):
     IMPORTANT: the key order should be SORTED when concat history obs!!!
     """
 
-    future_max_steps: int = 95
-    future_num_steps: int = 20
-
 
 class TwistPolicyCfg(PolicyCfg):
     class ObsScalesCfg(Config):

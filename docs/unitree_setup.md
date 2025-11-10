@@ -5,7 +5,7 @@ RoboJuDo has two environments for unitree robots:
 - **`UnitreeEnv`**: Based on [`unitree_sdk2py`](https://github.com/unitreerobotics/unitree_sdk2_python).
     - Support both  `UnitreeH1` and `UnitreeG1`.
     - May endure performance issues on `UnitreeG1` due to limited computing power.
-- **`UnitreeCppEnv`**: Based on [UnitreeCpp](https://github.com/GDDG08/unitree_cpp)
+- **`UnitreeCppEnv`**: Based on [UnitreeCpp](https://github.com/HansZ8/unitree_cpp)
     - Support `UnitreeG1`.
     - Can be deployed onboard `UnitreeG1` pc2. It is much faster and stable.
 
@@ -24,7 +24,7 @@ Choose the above Env&SDK options you want to use.
 
 ## UnitreeCppEnv
 
-As the setup of [UnitreeCpp](https://github.com/GDDG08/unitree_cpp#installation) :
+As the setup of [UnitreeCpp](https://github.com/HansZ8/unitree_cpp#installation) :
 
 1. Install the Unitree official C++ SDK: [`unitree_sdk2`](https://github.com/unitreerobotics/unitree_sdk2)
     > Note: It is recommended to use the default installation path. 
