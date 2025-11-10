@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from scipy.spatial.transform import Rotation as sRot
 
 
@@ -59,13 +58,6 @@ def get_gravity_orientation(quaternion):
     gravity_orientation[2] = 1 - 2 * (qw * qw + qz * qz)
 
     return gravity_orientation
-
-
-# =========================================
-
-
-def to_torch(x, dtype=torch.float32, device="cpu", requires_grad=False):
-    return torch.tensor(x, dtype=dtype, device=device, requires_grad=requires_grad)
 
 
 # =========================================

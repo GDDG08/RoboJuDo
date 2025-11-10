@@ -27,7 +27,8 @@ class H2HStudentPolicy(Policy):
         self._init_history(np.zeros(self.history_obs_size))
 
     def _get_commands(self, ctrl_data):
-        target_keys = ["MotionCtrlDeltaHook", "MotionExtendCtrl", "MotionCtrl", "SMPLCtrl", "RemoteCtrl", "SuperCtrl"]
+        target_keys = ["MotionH2HCtrl"]
+        # ,"MotionCtrlDeltaHook", "MotionExtendCtrl",  "SMPLCtrl", "RemoteCtrl", "SuperCtrl"]
         motion_res = next((ctrl_data[k] for k in target_keys if k in ctrl_data), None)
         if motion_res is None:
             raise KeyError("No matching motion controller found.")

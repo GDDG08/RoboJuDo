@@ -14,9 +14,8 @@ from poselib.poselib.skeleton.skeleton3d import SkeletonTree
 
 from robojudo.controller import Controller, ctrl_registry
 from robojudo.controller.ctrl_cfgs import MotionCtrlCfg
-from robojudo.controller.motion_gui import MotionGUI
-from robojudo.environment import Environment
-from robojudo.utils.util_func import my_quat_rotate_np, to_torch
+from robojudo.controller.utils.motion_gui import MotionGUI
+from robojudo.utils.util_func_torch import to_torch
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +24,11 @@ logger = logging.getLogger(__name__)
 @ctrl_registry.register
 class MotionCtrl(Controller):
     cfg_ctrl: MotionCtrlCfg
-    env: Environment
 
-    def __init__(
-        self,
-        cfg_ctrl,
-        env,
-        device="cpu",
-    ):
+    def __init__(self, cfg_ctrl, env, device="cpu"):
         super().__init__(cfg_ctrl=cfg_ctrl, env=env, device=device)
-        assert self.env is not None, "Env is required for MotionCtrl"
         self.enable_gui = self.cfg_ctrl.motion_ctrl_gui
         self.motion_path = self.cfg_ctrl.motion_path
-        self.extra_motion_data = self.cfg_ctrl.extra_motion_data
 
         assert os.path.exists(self.motion_path), f"Motion file {self.motion_path} not found!"
 
@@ -54,27 +45,6 @@ class MotionCtrl(Controller):
         ]
         self.motion_track_bodies_extend_id = motion_track_bodies_id + list(
             range(len(self.motion_body_names), len(self.motion_body_names) + len(extend_config))
-        )
-
-        # ========== robot body keypoints ==========
-        assert self.env.kinematics is not None, "Env Kinematics model is required for MotionCtrl"
-        robot_body_names = self.env.kinematics.body_names
-
-        robot_track_bodies_id = [robot_body_names.index(body_name) for body_name in self.cfg_ctrl.track_keypoints_names]
-
-        self.extend_body_parent_names = []
-        self.extend_body_parent_ids = []
-        extend_body_pos_list = []
-        for cfg in extend_config:
-            parent_name, pos = cfg["parent_name"], cfg["pos"]
-            extend_body_parent_id = robot_body_names.index(parent_name)
-            self.extend_body_parent_names.append(parent_name)
-            self.extend_body_parent_ids.append(extend_body_parent_id)
-            extend_body_pos_list.append(pos)
-        self.extend_body_pos = np.asarray(extend_body_pos_list).reshape(-1, 3)
-
-        self.robot_track_bodies_extend_id = robot_track_bodies_id + list(
-            range(len(robot_body_names), len(robot_body_names) + len(extend_config))
         )
 
         # ========== PHC motionlib ==========
@@ -100,19 +70,21 @@ class MotionCtrl(Controller):
         self._motion_lib = MotionLibReal(motion_lib_cfg)
         self.ref_motion_cache = {}
 
+        self.motion_time: float = 0
+        self.motion_offset: np.ndarray = np.array([0.0, 0.0, 0.0])
+
         # ========== Play Control ==========
-        self.motion_time = 0
         self.motion_id = -1
         self.motion_name = "Blank Name"
         self.motion_length = 0.01
-        self.motion_offset = np.array([0.0, 0.0, 0.0])
+
         self.motion_target_heading = np.array([0.0, 0.0, 0.0, 1.0])  # Default target heading
 
         self.play_speed_ratio = 1
 
         self.fade_step = 0.01
         self.fade_delay = 20  # ms
-        self.speed_target = 1 / 2
+        self.speed_target = 1
         self.speed_steps = iter(np.arange(0, self.speed_target + self.fade_step, self.fade_step))
 
         if self.enable_gui:
@@ -162,16 +134,19 @@ class MotionCtrl(Controller):
             load_thread = Thread(target=load_motion_thread, daemon=True)
             load_thread.start()
 
-    def get_motion(self):
+    def get_motion(self, motion_ids=None, motion_times=None, offset=None):
         if self.lock_motion_load.locked():
             logger.debug("[MotionCtrl] use cache motion as loading lock")
             return self.ref_motion_cache
         # read motion
         # logger.debug(f"{self.motion_id=}, {self.motion_timestep=}")
 
-        motion_ids = to_torch([0], dtype=torch.int32)
-        motion_times = to_torch(self.motion_time).repeat(1)
-        offset = to_torch(self.motion_offset).repeat(1)
+        if motion_ids is None:
+            motion_ids = to_torch([0], dtype=torch.int32)
+        if motion_times is None:
+            motion_times = to_torch([self.motion_time], dtype=torch.float32)
+        if offset is None:
+            offset = to_torch(self.motion_offset[np.newaxis, :], dtype=torch.float32)
 
         ## Cache the motion + offset
         if (
@@ -194,24 +169,6 @@ class MotionCtrl(Controller):
 
         return self.ref_motion_cache
 
-    def get_robot_state(self):
-        fk_info = self.env.fk_info
-        assert fk_info is not None, "Env fk_info is required for MotionCtrl"
-
-        body_pos = np.array([body_info["pos"] for body_info in fk_info.values()])
-        body_rot = np.array([body_info["quat"] for body_info in fk_info.values()])
-
-        extend_curr_pos = (
-            my_quat_rotate_np(
-                body_rot[self.extend_body_parent_ids].reshape(-1, 4), self.extend_body_pos.reshape(-1, 3)
-            ).reshape(-1, 3)
-            + body_pos[self.extend_body_parent_ids]
-        )
-        body_pos_extend = np.concatenate([body_pos, extend_curr_pos], axis=0)
-        body_pos_subset = body_pos_extend[self.robot_track_bodies_extend_id, :]
-
-        return body_pos_extend, body_pos_subset
-
     def get_data(self):
         motion_res = self.get_motion()
         ref_body_pos_extend = motion_res["rg_pos_t"].cpu().numpy().squeeze().copy()
@@ -219,34 +176,14 @@ class MotionCtrl(Controller):
         ref_body_pos_subset = ref_body_pos_extend[self.motion_track_bodies_extend_id]
         ref_body_vel_subset = ref_body_vel_extend[self.motion_track_bodies_extend_id]
 
-        body_pos_extend, body_pos_subset = self.get_robot_state()
-
         ctrl_data = {
             "ref_body_pos_subset": ref_body_pos_subset,
             "ref_body_vel_subset": ref_body_vel_subset,
-            "robot_body_pos_subset": body_pos_subset,
             "dof_pos": motion_res["dof_pos"].cpu().numpy().squeeze().copy(),
         }
 
         if (hand_pose := motion_res.get("hand_pose", None)) is not None:
             ctrl_data["hand_pose"] = hand_pose.cpu().numpy().squeeze().copy().reshape(2, -1)
-
-        if self.extra_motion_data:
-            ctrl_data.update(
-                {
-                    "_motion_track_bodies_extend_id": self.motion_track_bodies_extend_id,
-                    "_robot_track_bodies_extend_id": self.robot_track_bodies_extend_id,
-                    "rg_pos_t": ref_body_pos_extend,
-                    "body_vel_t": ref_body_vel_extend,
-                    # extra for motion recognition
-                    "root_pos": motion_res["root_pos"].cpu().numpy().squeeze().copy(),
-                    "root_rot": motion_res["root_rot"].cpu().numpy().squeeze().copy(),
-                    "root_vel": motion_res["root_vel"].cpu().numpy().squeeze().copy() * self.play_speed_ratio,
-                    "root_ang_vel": motion_res["root_ang_vel"].cpu().numpy().squeeze().copy() * self.play_speed_ratio,
-                    "freq": motion_res["freq"].cpu().numpy().squeeze().copy(),
-                    "phase": motion_res["phase"].cpu().numpy().squeeze().copy(),
-                }
-            )
 
         return ctrl_data
 
@@ -262,19 +199,11 @@ class MotionCtrl(Controller):
     def post_step_callback(self, commands=None, motion_time_step=0.02):
         if commands is None:
             commands = []
-        # logger.debug(f"{self.play_speed_ratio=}")
+
         self.motion_time += motion_time_step * self.play_speed_ratio
 
-        # if (self.motion_time) > (self.motion_length + 1):
-        #     # self.motion_timestep = 0
-        #     self.load_motion(self.motion_id + 1)
-        #     # self.motion_offset = -self._motion_lib.get_root_pos_smpl([0], to_torch([0]))["root_pos"][0]/
-        #       + self.zed_odometry.get_status()["position_xyz"]
-        #     # logger.debug(f"{self.motion_offset=}")
-        #     self.reset()
         if self.enable_gui:
             self.motion_gui.update_time(self.motion_time)
-        # pass
 
         for command in commands:
             match command:
@@ -294,7 +223,7 @@ class MotionCtrl(Controller):
     def reset(self):
         self.motion_time = 0
 
-        motion_init_pos = self._motion_lib.get_root_pos_smpl([0], to_torch([0]))["root_pos"][0]
+        motion_init_pos = self._motion_lib.get_root_pos_smpl([0], to_torch([0]))["root_pos"][0].cpu().numpy()
         motion_init_pos[2] = 0.0
         self.motion_offset = -motion_init_pos
         # logger.debug(f"{self.motion_offset=}")
@@ -322,21 +251,16 @@ if __name__ == "__main__":
     from pprint import pprint
 
     from robojudo.config.g1.ctrl.g1_motion_ctrl_cfg import G1MotionCtrlCfg
-    from robojudo.config.g1.env.g1_mujuco_env_cfg import G1MujocoEnvCfg
-    from robojudo.environment.mujoco_env import MujocoEnv
 
-    env = MujocoEnv(cfg_env=G1MujocoEnvCfg(xml="assets/robots/g1/xml/g1_29dof_rev_1_0.xml"))
-    env.reset()
     motion_ctrl = MotionCtrl(
-        cfg_ctrl=G1MotionCtrlCfg(
-            motion_name="singles/0-Eyes_Japan_Dataset_hamada_gesture_etc-23-mobile call-hamada_poses.pkl"  # noqa: E501
-        ),
-        env=env,
+        cfg_ctrl=G1MotionCtrlCfg(motion_name="singles/0-KIT_6_WalkInCounterClockwiseCircle05_1_poses"),
+        env=None,
     )
 
     while True:
-        motion_ctrl.post_step_callback()
-        motion_data = motion_ctrl.get_data()
-        pprint(motion_data)
-        motion_ctrl.post_step_callback()
+        ctrl_data = motion_ctrl.get_data()
+        _, commands = motion_ctrl.process_triggers(ctrl_data)
+        pprint(ctrl_data)
+        motion_ctrl.post_step_callback(commands)
+        pprint(commands)
         time.sleep(0.1)

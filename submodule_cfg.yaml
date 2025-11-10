@@ -27,7 +27,7 @@ phc:
     # Patch for useless import and bugfix
     - ../patches/phc.patch
     # [Optional] Windows Platform patch, for speed up multi-process
-    # - third_party/patches/phc-win.patch 
+    # - ../patches/phc-win.patch 
   addons:
     # Addon for 29 dof g1, as phc only support 23dof version
     - ../patches/phc_addon_g1

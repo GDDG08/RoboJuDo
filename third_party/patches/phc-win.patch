@@ -1,5 +1,5 @@
 diff --git a/phc/utils/motion_lib_real.py b/phc/utils/motion_lib_real.py
-index e954ad4..2219d09 100644
+index 353f31c..3738e18 100644
 --- a/phc/utils/motion_lib_real.py
 +++ b/phc/utils/motion_lib_real.py
 @@ -9,6 +9,7 @@ from phc.utils import torch_utils

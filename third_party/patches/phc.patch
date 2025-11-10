@@ -1,5 +1,5 @@
 diff --git a/phc/utils/motion_lib_real.py b/phc/utils/motion_lib_real.py
-index e954ad4..7326f0a 100644
+index e954ad4..353f31c 100644
 --- a/phc/utils/motion_lib_real.py
 +++ b/phc/utils/motion_lib_real.py
 @@ -12,11 +12,11 @@ import torch.multiprocessing as mp
@@ -19,7 +19,7 @@ index e954ad4..7326f0a 100644
  from scipy.spatial.transform import Rotation as sRot
  import random
  from phc.utils.flags import flags
-@@ -404,7 +404,7 @@ class MotionLibReal(MotionLibBase):
+@@ -404,11 +404,11 @@ class MotionLibReal(MotionLibBase):
              
              if not target_heading is None:
                  start_root_rot = sRot.from_rotvec(pose_aa[0, 0])
@@ -28,6 +28,11 @@ index e954ad4..7326f0a 100644
                  heading_delta = sRot.from_quat(target_heading) * heading_inv_rot 
                  pose_aa[:, 0] = torch.tensor((heading_delta * sRot.from_rotvec(pose_aa[:, 0])).as_rotvec())
  
+-                trans = torch.matmul(trans, torch.from_numpy(heading_delta.as_matrix().squeeze().T))
++                trans = torch.matmul(trans.float(), torch.from_numpy(heading_delta.as_matrix().squeeze().T).float())
+             
+             trans, trans_fix = MotionLibReal.fix_trans_height(pose_aa, trans, mesh_parsers, fix_height_mode = fix_height)
+             curr_motion = mesh_parsers.fk_batch(pose_aa[None, ], trans[None, ], return_full= True, dt = dt)
 diff --git a/phc/utils/torch_humanoid_batch.py b/phc/utils/torch_humanoid_batch.py
 index 5299545..2ed3478 100644
 --- a/phc/utils/torch_humanoid_batch.py

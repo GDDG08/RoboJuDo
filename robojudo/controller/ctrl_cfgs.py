@@ -79,16 +79,15 @@ class MotionCtrlCfg(CtrlCfg):
                 phc_robot_config_dict["asset"]["assetFileName"] = (
                     phc_dir_path / phc_robot_config_dict["asset"]["assetFileName"]
                 ).as_posix()
-                phc_robot_config_dict["asset"]["urdfFileName"] = (
-                    phc_dir_path / phc_robot_config_dict["asset"]["urdfFileName"]
-                ).as_posix()
+                # phc_robot_config_dict["asset"]["urdfFileName"] = (
+                #     phc_dir_path / phc_robot_config_dict["asset"]["urdfFileName"]
+                # ).as_posix()
 
                 self.robot_config = phc_robot_config_dict
 
     ctrl_type: str = "MotionCtrl"
 
     motion_ctrl_gui: bool = True
-    extra_motion_data: bool = False  # extra data for motion recognition
 
     # ==== policy specific configs ====
     track_keypoints_names: list[str] = []
@@ -102,6 +101,19 @@ class MotionCtrlCfg(CtrlCfg):
     def motion_path(self) -> str:
         motion_path = ASSETS_DIR / f"motions/{self.robot}/phc/{self.motion_name}.pkl"
         return motion_path.as_posix()
+
+
+class MotionH2HCtrlCfg(MotionCtrlCfg):
+    ctrl_type: str = "MotionH2HCtrl"
+
+    extra_motion_data: bool = False  # extra data for motion recognition
+
+
+class MotionKungfuBotCtrlCfg(MotionCtrlCfg):
+    ctrl_type: str = "MotionKungfuBotCtrl"
+
+    future_max_steps: int = 95
+    future_num_steps: int = 20
 
 
 class BeyondMimicCtrlCfg(CtrlCfg):

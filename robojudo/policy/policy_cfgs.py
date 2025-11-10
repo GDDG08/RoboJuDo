@@ -340,3 +340,49 @@ class AsapLocoPolicyCfg(PolicyCfg):
 
     # ======= Default Command CONFIGURATION =======
     command_base_height_default: float
+
+
+class KungfuBotGeneralPolicyCfg(PolicyCfg):
+    policy_type: str = "KungfuBotGeneralPolicy"
+    disable_autoload: bool = True
+
+    # ======= MOTION POLICY CONFIGURATION =======
+    policy_name: str
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/kungfubot2/{self.policy_name}.onnx"
+        return policy_file.as_posix()
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    class ObsScalesCfg(Config):
+        # base_lin_vel: float
+        base_ang_vel: float
+        dof_pos: float
+        dof_vel: float
+        actions: float
+        roll_pitch: float
+        # anchor_ref_pos: float
+        anchor_ref_rot: float
+        next_step_ref_motion: float
+        history: float
+        future_motion_root_height: float
+        future_motion_roll_pitch: float
+        future_motion_base_lin_vel: float
+        future_motion_base_yaw_vel: float
+        future_motion_dof_pos: float
+
+    action_scale: float = 0.0  # not used, scale for each dof
+    action_clip: float | None = 100.0
+    action_scales: list[float]
+    obs_scales: ObsScalesCfg
+
+    history_length: int = 10  # number of history observations to use
+    history_obs_dims: dict[str, int] = {}
+    """
+    Note: the history obs item should be aligned with code of policy
+    IMPORTANT: the key order should be SORTED when concat history obs!!!
+    """
+
+    future_max_steps: int = 95
+    future_num_steps: int = 20
