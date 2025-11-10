@@ -8,9 +8,9 @@
 	ignore = dirty
 [submodule "packages/zed_proxy"]
 	path = packages/zed_proxy
-	url = https://github.com/GDDG08/ZED-Proxy
+	url = https://github.com/HansZ8/ZED-Proxy
 	ignore = dirty
 [submodule "packages/unitree_cpp"]
 	path = packages/unitree_cpp
-	url = https://github.com/GDDG08/unitree_cpp
+	url = https://github.com/HansZ8/unitree_cpp
 	ignore = dirty
