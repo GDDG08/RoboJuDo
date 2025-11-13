@@ -40,6 +40,7 @@ class KungfuBotGeneralPolicy(Policy):
 
         self.obs_scales = cfg_policy.obs_scales
         self.action_scales = np.asarray(self.cfg_policy.action_scales)
+        self.compatibility_old_version = cfg_policy.compatibility_old_version
 
         self.reset()
 
@@ -118,7 +119,8 @@ class KungfuBotGeneralPolicy(Policy):
             ref_frame_anchor_pos,
             ref_frame_anchor_rot,
         )
-        ori = ori[[1, 2, 3, 0]]  # WARN: this is a bug from PBHC repo, https://github.com/TeleHuman/PBHC/issues/68
+        if self.compatibility_old_version:
+            ori = ori[[1, 2, 3, 0]]  # WARN: this is a bug from PBHC repo, https://github.com/TeleHuman/PBHC/issues/68
         mat = matrix_from_quat(ori)
         anchor_ref_rot = mat[:, :2].flatten()
 

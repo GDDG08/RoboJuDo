@@ -384,6 +384,9 @@ class KungfuBotGeneralPolicyCfg(PolicyCfg):
     IMPORTANT: the key order should be SORTED when concat history obs!!!
     """
 
+    compatibility_old_version: bool = False
+    """For old version of kungfubot general policy (before 2025-11-13 bugfix #68)"""
+
 
 class TwistPolicyCfg(PolicyCfg):
     class ObsScalesCfg(Config):

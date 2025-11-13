@@ -230,3 +230,6 @@ class G1KungfuBotGeneralPolicyCfg(KungfuBotGeneralPolicyCfg):
         "dof_vel": obs_dof.num_dofs,
         "roll_pitch": 2,
     }
+
+    compatibility_old_version: bool = False
+    """For old version of kungfubot general policy (before 2025-11-13 bugfix #68)"""

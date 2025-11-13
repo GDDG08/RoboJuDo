@@ -272,7 +272,8 @@ class g1_kungfubot2(RlPipelineCfg):
     ]
 
     policy: G1KungfuBotGeneralPolicyCfg = G1KungfuBotGeneralPolicyCfg(
-        policy_name="horse_test_43000"  # this is a test model trained with only one motion
+        policy_name="horse_test_43000",  # this is a test model trained with only one motion
+        compatibility_old_version=True,  # for old version of kungfubot general policy (before 2025-11-13 bugfix #68)
     )
 
 
