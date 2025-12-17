@@ -3,6 +3,13 @@
 
 *A plug-and-play deploy framework for robots. Just deploy, just do.*
 
+<h3>
+🔗 RoboJuDo is part of the FRoM-W1 project, check it out at 👉 
+<a href="https://github.com/OpenMOSS/FRoM-W1">
+  OpenMOSS / FRoM-W1
+</a>
+</h3>
+
 <p>
   <!-- Version -->
   <a href="https://github.com/HansZ8/RoboJuDo/releases">
@@ -352,8 +359,15 @@ We warmly welcome contributions from the community. Let’s build a strong and o
 If you find our work useful, please cite our GitHub repository:
 
 ```bibtex
+@misc{FRoM-W1,
+  author = {Peng Li, Zihan Zhuang, Yangfan Gao, Yi Dong, Sixian Li, Changhao Jiang, Shihan Dou, Zhiheng Xi, Enyu Zhou, Jixuan Huang, Hui Li, Xingjun Ma, Tao Gui, Zuxuan Wu, Qi Zhang, Xuanjing Huang, Yu-Gang Jiang, Xipeng Qiu},
+  title = {FRoM-W1: Towards General Humanoid Whole-Body Control with Language Instructions},
+  url = {https://github.com/OpenMOSS/FRoM-W1},
+  year = {2025}
+}
+
 @misc{RoboJuDo,
-  author = {Hans Zhuang, Dsixy, artpli},
+  author = {Zihan Zhuang, Yi Dong, Peng Li},
   title = {A plug-and-play deploy framework for robots. Just deploy, just do.},
   url = {https://github.com/HansZ8/RoboJuDo},
   year = {2025}
