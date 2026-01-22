@@ -136,7 +136,7 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 
 # 🛠️Easy Setup
 
-RoboJuDo supports **multiple platforms**, officially tested on **Ubuntu** and **Windows**. 
+RoboJuDo supports **multiple platforms**, officially tested on **Ubuntu**, **macOS**and **Windows**. 
 
 Robot onboard PCs are also supported.
 
