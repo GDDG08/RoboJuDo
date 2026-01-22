@@ -359,11 +359,14 @@ We warmly welcome contributions from the community. Let’s build a strong and o
 If you find our work useful, please cite our GitHub repository:
 
 ```bibtex
-@misc{FRoM-W1,
-  author = {Peng Li, Zihan Zhuang, Yangfan Gao, Yi Dong, Sixian Li, Changhao Jiang, Shihan Dou, Zhiheng Xi, Enyu Zhou, Jixuan Huang, Hui Li, Xingjun Ma, Tao Gui, Zuxuan Wu, Qi Zhang, Xuanjing Huang, Yu-Gang Jiang, Xipeng Qiu},
-  title = {FRoM-W1: Towards General Humanoid Whole-Body Control with Language Instructions},
-  url = {https://github.com/OpenMOSS/FRoM-W1},
-  year = {2025}
+@misc{li2026fromw1generalhumanoidwholebody,
+      title={FRoM-W1: Towards General Humanoid Whole-Body Control with Language Instructions}, 
+      author={Peng Li and Zihan Zhuang and Yangfan Gao and Yi Dong and Sixian Li and Changhao Jiang and Shihan Dou and Zhiheng Xi and Enyu Zhou and Jixuan Huang and Hui Li and Jingjing Gong and Xingjun Ma and Tao Gui and Zuxuan Wu and Qi Zhang and Xuanjing Huang and Yu-Gang Jiang and Xipeng Qiu},
+      year={2026},
+      eprint={2601.12799},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2601.12799}, 
 }
 
 @misc{RoboJuDo,
