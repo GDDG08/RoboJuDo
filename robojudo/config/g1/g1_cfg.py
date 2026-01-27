@@ -17,6 +17,7 @@ from .ctrl.g1_motion_ctrl_cfg import (  # noqa: F401
     G1MotionKungfuBotCtrlCfg,
     G1MotionTwistCtrlCfg,
 )
+from .ctrl.g1_goalkeeper_ball_dds_ctrl_cfg import G1GoalkeeperBallDdsCtrlCfg  # noqa: F401
 from .ctrl.g1_twist_redis_ctrl_cfg import G1TwistRedisCtrlCfg  # noqa: F401
 from .env.g1_dummy_env_cfg import G1DummyEnvCfg  # noqa: F401
 from .env.g1_mujuco_env_cfg import G1_12MujocoEnvCfg, G1_23MujocoEnvCfg, G1MujocoEnvCfg  # noqa: F401
@@ -29,6 +30,7 @@ from .policy.g1_kungfubot_policy_cfg import G1KungfuBotGeneralPolicyCfg, G1Kungf
 from .policy.g1_smooth_policy_cfg import G1SmoothPolicyCfg  # noqa: F401
 from .policy.g1_twist_policy_cfg import G1TwistPolicyCfg  # noqa: F401
 from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg, G1UnitreeWoGaitPolicyCfg  # noqa: F401
+from .policy.g1_goalkeeper_policy_cfg import G1GoalkeeperPolicyCfg  # noqa: F401
 
 
 # ======================== Basic Configs ======================== #
@@ -77,6 +79,23 @@ class g1_real(g1):
     ]
 
     do_safety_check: bool = True  # enable safety check for real robot
+
+
+@cfg_registry.register
+class g1_goalkeeper_real(RlPipelineCfg):
+    robot: str = "g1"
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg | G1GoalkeeperBallDdsCtrlCfg] = [
+        UnitreeCtrlCfg(triggers_extra={"Start": "[POLICY_TOGGLE]"}),
+        G1GoalkeeperBallDdsCtrlCfg(),
+    ]
+    policy: G1GoalkeeperPolicyCfg = G1GoalkeeperPolicyCfg()
+    do_safety_check: bool = True
 
 
 @cfg_registry.register

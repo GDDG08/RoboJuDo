@@ -427,3 +427,36 @@ class TwistPolicyCfg(PolicyCfg):
     @property
     def mimic_obs_other_ids(self) -> list[int]:
         return [f for f in range(self.mimic_obs_total_degrees) if f not in self.mimic_obs_wrist_ids]
+
+
+class GoalkeeperPolicyCfg(PolicyCfg):
+    policy_type: str = "GoalkeeperPolicy"
+    disable_autoload: bool = True
+
+    load_checkpoint: bool = True
+    checkpoint_path: str = "/home/chunyu/programs/Humanoid-Goalkeeper/legged_gym/resources/weight/goalkeeper.pt"
+    goalkeeper_repo_path: str = "/home/chunyu/programs/Humanoid-Goalkeeper"
+
+    # ======= POLICY SPECIFIC CONFIGURATION =======
+    num_one_step_obs: int = 96
+    actor_history_length: int = 10
+    num_actor_obs: int = 960
+    num_critic_obs: int = 960
+
+    actor_hidden_dims: list[int] = [512, 256, 128]
+    critic_hidden_dims: list[int] = [512, 256, 128]
+    activation: str = "elu"
+
+    ball_pos_scale: float = 0.3
+    ang_vel_scale: float = 0.25
+    dof_pos_scale: float = 1.0
+    dof_vel_scale: float = 0.05
+
+    camera_R_tc: list[list[float]] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    camera_t_tc: list[float] = [0.103, 0.01753, 0.420107]
+
+    history_length: int = 10
+
+    @property
+    def history_obs_size(self) -> int:
+        return self.num_one_step_obs

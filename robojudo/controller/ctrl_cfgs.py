@@ -152,6 +152,15 @@ class BeyondMimicCtrlCfg(CtrlCfg):
     motion_cfg: MotionCommandCfg
 
 
+class GoalkeeperBallDdsCtrlCfg(CtrlCfg):
+    ctrl_type: str = "GoalkeeperBallDdsCtrl"
+
+    domain_id: int = 0
+    topic_name: str = "detectionresults"
+    poll_interval: float = 0.01
+    timeout_s: float = 0.3
+
+
 class TwistRedisCtrlCfg(CtrlCfg):
     ctrl_type: str = "TwistRedisCtrl"
 

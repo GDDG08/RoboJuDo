@@ -19,6 +19,12 @@ from robojudo.utils.util_func import get_gravity_orientation
 logger = logging.getLogger(__name__)
 
 
+def _toggle_policy_enabled(policy_enabled: bool, commands: list[str]) -> bool:
+    if commands.count("[POLICY_TOGGLE]") % 2 == 1:
+        return not policy_enabled
+    return policy_enabled
+
+
 class PolicyWrapper:
     """A wrapper for Policy to handle observation and action adaptation."""
 
@@ -78,6 +84,7 @@ class RlPipeline(Pipeline):
             env_dof_cfg=self.env.dof_cfg,
             device=self.device,
         )
+        self.policy_enabled = False
 
         self.env.update_dof_cfg(override_cfg=self.policy.cfg_action_dof)
         self.visualizer = self.env.visualizer
@@ -153,8 +160,16 @@ class RlPipeline(Pipeline):
         if len(commands) > 0:
             logger.info(f"{'=' * 10} COMMANDS {'=' * 10}\n{commands}")
 
+        new_policy_enabled = _toggle_policy_enabled(self.policy_enabled, commands)
+        if new_policy_enabled != self.policy_enabled:
+            self.policy_enabled = new_policy_enabled
+            self.policy.reset()
+
         obs, extras = self.policy.get_observation(env_data, ctrl_data)
-        pd_target = self.policy.get_pd_target(obs)
+        if self.policy_enabled:
+            pd_target = self.policy.get_pd_target(obs)
+        else:
+            pd_target = self.policy.get_init_dof_pos()
 
         if not dry_run:
             self.env.step(pd_target, extras.get("hand_pose", None))
