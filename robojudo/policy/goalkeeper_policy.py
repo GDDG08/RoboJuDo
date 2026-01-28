@@ -83,11 +83,17 @@ class GoalkeeperPolicy(Policy):
         if self.actor_critic is None:
             raise RuntimeError("ActorCritic not loaded. Set load_checkpoint=True to enable inference.")
 
-        obs_hist = np.array(self.history_buf).flatten()
         self.history_buf.append(obs)
-        obs_input = np.concatenate([obs, obs_hist])
+        # ActorCritic expects obs_history length = num_one_step_obs * actor_history_length
+        obs_input = np.array(self.history_buf).flatten()
         with torch.no_grad():
             action = self.actor_critic.act_inference(torch.from_numpy(obs_input).float().unsqueeze(0))
         action = action.cpu().numpy().squeeze().astype(np.float32)
+        if self.action_clip is not None:
+            action = np.clip(action, -self.action_clip, self.action_clip)
         self.last_action = action.copy()
         return action
+
+    def get_pd_target(self, obs: np.ndarray) -> np.ndarray:
+        action = self.get_action(obs)
+        return action * self.action_scale + self.default_pos

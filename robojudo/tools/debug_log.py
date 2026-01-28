@@ -16,6 +16,10 @@ msgpack_numpy.patch()
 class DebugCfg(Config):
     log_obs: bool = False
     """Warning, this is debug only, may generate large log files and slow down the system."""
+    print_pd_target: bool = False
+    """Print per-joint PD targets to stdout for debugging."""
+    print_pd_target_hz: float = 1.0
+    """Print rate for PD targets."""
 
 
 class DebugLogger:

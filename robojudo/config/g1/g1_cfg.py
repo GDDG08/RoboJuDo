@@ -9,6 +9,7 @@ from robojudo.pipeline.pipeline_cfgs import (
     RlMultiPolicyPipelineCfg,  # noqa: F401
     RlPipelineCfg,  # noqa: F401
 )
+from robojudo.tools.debug_log import DebugCfg
 
 from .ctrl.g1_beyondmimic_ctrl_cfg import G1BeyondmimicCtrlCfg  # noqa: F401
 from .ctrl.g1_motion_ctrl_cfg import (  # noqa: F401
@@ -70,7 +71,7 @@ class g1_real(g1):
         # env_type="UnitreeEnv",  # For unitree_sdk2py
         env_type="UnitreeCppEnv",  # For unitree_cpp, check README for more details
         unitree=G1UnitreeCfg(
-            net_if="eth0",  # note: change to your network interface
+            net_if="eno1",  # note: change to your network interface
         ),
     )
 
@@ -87,16 +88,19 @@ class g1_goalkeeper_real(RlPipelineCfg):
     env: G1RealEnvCfg = G1RealEnvCfg(
         env_type="UnitreeCppEnv",
         unitree=G1UnitreeCfg(
-            net_if="eth0",
+            net_if="eno1",
         ),
+        #act=False,
     )
+    #debug: DebugCfg = DebugCfg(print_pd_target=True, print_pd_target_hz=1.0)  # 每秒打印一次
+
     ctrl: list[UnitreeCtrlCfg | G1GoalkeeperBallDdsCtrlCfg] = [
         UnitreeCtrlCfg(triggers_extra={"Start": "[POLICY_TOGGLE]"}),
         G1GoalkeeperBallDdsCtrlCfg(),
     ]
     policy: G1GoalkeeperPolicyCfg = G1GoalkeeperPolicyCfg()
     do_safety_check: bool = True
-
+    
 
 @cfg_registry.register
 class g1_switch(RlMultiPolicyPipelineCfg):

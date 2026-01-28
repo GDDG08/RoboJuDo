@@ -55,8 +55,11 @@ class PolicyWrapper:
         return self.actions_adapter.fit(action)
 
     def get_pd_target(self, obs):
-        action = self.policy.get_action(obs)
-        pd_target = action + self.policy.default_pos
+        if hasattr(self.policy, "get_pd_target"):
+            pd_target = self.policy.get_pd_target(obs)  # type: ignore[attr-defined]
+        else:
+            action = self.policy.get_action(obs)
+            pd_target = action + self.policy.default_pos
         return self.actions_adapter.fit(pd_target, template=self.env_dof_cfg.default_pos)
 
     def get_init_dof_pos(self):
@@ -91,6 +94,7 @@ class RlPipeline(Pipeline):
 
         self.freq = self.cfg.policy.freq
         self.dt = 1.0 / self.freq
+        self._last_pd_target_print_time = 0.0
 
         self.self_check()
         self.reset()
@@ -149,6 +153,16 @@ class RlPipeline(Pipeline):
                 pd_target=pd_target,
                 timestep=self.timestep,
             )
+        if self.cfg.debug.print_pd_target:
+            now = time.time()
+            interval = 1.0 / max(self.cfg.debug.print_pd_target_hz, 1e-6)
+            if now - self._last_pd_target_print_time >= interval:
+                joint_names = self.env.dof_cfg.joint_names
+                values = ", ".join(
+                    f"{name}={val:.4f}" for name, val in zip(joint_names, pd_target, strict=False)
+                )
+                logger.info(f"[PD_TARGET] {values}")
+                self._last_pd_target_print_time = now
 
     def step(self, dry_run=False):
         self.env.update()

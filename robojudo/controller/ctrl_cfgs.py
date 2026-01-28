@@ -159,6 +159,8 @@ class GoalkeeperBallDdsCtrlCfg(CtrlCfg):
     topic_name: str = "detectionresults"
     poll_interval: float = 0.01
     timeout_s: float = 0.3
+    # Exit if no DDS messages received within this window (0 disables).
+    no_msg_timeout_s: float = 2.0
 
 
 class TwistRedisCtrlCfg(CtrlCfg):

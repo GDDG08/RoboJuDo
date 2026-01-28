@@ -57,6 +57,9 @@ class GoalkeeperBallDdsCtrl(Controller):
         self.ball_score = -1.0
         self.ball_valid = False
         self.last_update_time = 0.0
+        self.start_time = time.time()
+        self.last_msg_time = self.start_time
+        self.received_any_msg = False
 
         if not _DDS_AVAILABLE:
             raise RuntimeError(
@@ -83,6 +86,9 @@ class GoalkeeperBallDdsCtrl(Controller):
                 continue
 
             if samples:
+                now = time.time()
+                self.last_msg_time = now
+                self.received_any_msg = True
                 for sample in samples:
                     results = getattr(sample, "results", None)
                     if results is None:
@@ -102,8 +108,22 @@ class GoalkeeperBallDdsCtrl(Controller):
         self.ball_score = -1.0
         self.ball_valid = False
         self.last_update_time = 0.0
+        self.start_time = time.time()
+        self.last_msg_time = self.start_time
+        self.received_any_msg = False
 
     def get_data(self):
+        if self.cfg_ctrl.no_msg_timeout_s > 0:
+            now = time.time()
+            last_msg_time = self.last_msg_time if self.received_any_msg else self.start_time
+            if now - last_msg_time > self.cfg_ctrl.no_msg_timeout_s:
+                if self.env is not None:
+                    self.env.shutdown()
+                raise RuntimeError(
+                    f"No DDS messages received for {self.cfg_ctrl.no_msg_timeout_s:.2f}s. "
+                    "Exiting pipeline."
+                )
+
         if self.ball_valid and self.cfg_ctrl.timeout_s > 0:
             if time.time() - self.last_update_time > self.cfg_ctrl.timeout_s:
                 self.ball_valid = False

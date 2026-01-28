@@ -433,18 +433,23 @@ class GoalkeeperPolicyCfg(PolicyCfg):
     policy_type: str = "GoalkeeperPolicy"
     disable_autoload: bool = True
 
+    # action post processing (match Humanoid-Goalkeeper config)
+    action_scale: float = 0.25
+    action_clip: float | None = 100.0
+
     load_checkpoint: bool = True
-    checkpoint_path: str = "/home/chunyu/programs/Humanoid-Goalkeeper/legged_gym/resources/weight/goalkeeper.pt"
-    goalkeeper_repo_path: str = "/home/chunyu/programs/Humanoid-Goalkeeper"
+    checkpoint_path: str = "/home/whuai101/chunyu/Humanoid-Goalkeeper/legged_gym/resources/weight/goalkeeper.pt"
+    goalkeeper_repo_path: str = "/home/whuai101/chunyu/Humanoid-Goalkeeper"
 
     # ======= POLICY SPECIFIC CONFIGURATION =======
+    # Match Humanoid-Goalkeeper (g1_29_config.py) training setup
     num_one_step_obs: int = 96
     actor_history_length: int = 10
     num_actor_obs: int = 960
-    num_critic_obs: int = 960
+    num_critic_obs: int = 113
 
-    actor_hidden_dims: list[int] = [512, 256, 128]
-    critic_hidden_dims: list[int] = [512, 256, 128]
+    actor_hidden_dims: list[int] = [512, 256, 256]
+    critic_hidden_dims: list[int] = [512, 256, 256]
     activation: str = "elu"
 
     ball_pos_scale: float = 0.3

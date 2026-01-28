@@ -6,3 +6,4 @@ class G1GoalkeeperBallDdsCtrlCfg(GoalkeeperBallDdsCtrlCfg):
     topic_name: str = "detectionresults"
     poll_interval: float = 0.01
     timeout_s: float = 0.3
+    no_msg_timeout_s: float = 2.0
