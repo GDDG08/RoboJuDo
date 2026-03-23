@@ -58,6 +58,13 @@ class Policy(ABC):
         # self.last_action = np.zeros(self.num_actions) # TODO
         raise NotImplementedError
 
+    def reset_alignment(self):
+        """Reset heading/spatial alignment without resetting motion playback state.
+
+        Override in policies that compute a heading offset at runtime (e.g. ProtoMotions
+        trackers). The default no-op is correct for policies that don't have alignment state.
+        """
+
     @abstractmethod
     def post_step_callback(self, commands: list[str] | None = None):
         raise NotImplementedError

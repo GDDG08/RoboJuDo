@@ -111,6 +111,7 @@ class RlPipeline(Pipeline):
             logger.error("Robot fallen! Shutdown for safety.")
             if hasattr(self.env, "reborn"):
                 self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
+                self.policy.reset_alignment()
             else:
                 self.env.shutdown()
 
@@ -126,6 +127,7 @@ class RlPipeline(Pipeline):
                     if hasattr(self.env, "reborn"):
                         logger.warning("Simulation Env reborn!")
                         self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
+                        self.policy.reset_alignment()
 
         self.ctrl_manager.post_step_callback(ctrl_data)
 
