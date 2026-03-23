@@ -36,6 +36,9 @@ class MujocoEnvCfg(EnvCfg):
 
     visualize_extras: bool = True  # TODO: remove
 
+    random_heading: bool = False
+    """Randomize the robot's yaw heading on each spawn/reborn (useful for testing heading alignment)."""
+
 
 class RobotEnvCfg(EnvCfg):
     env_type: str = "DummyEnv"

@@ -69,7 +69,7 @@ class g1_real(g1):
         # env_type="UnitreeEnv",  # For unitree_sdk2py
         env_type="UnitreeCppEnv",  # For unitree_cpp, check README for more details
         unitree=G1UnitreeCfg(
-            net_if="eth0",  # note: change to your network interface
+            net_if="eth0",
         ),
     )
 
@@ -348,16 +348,29 @@ class g1_protomotions_tracker(RlPipelineCfg):
 
     Usage::
 
-        cd robojudo && python scripts/run_tracker_pipeline.py \\
-            -c g1_protomotions_tracker \\
+        cd robojudo && python scripts/run_pipeline.py -c g1_protomotions_tracker \\
             --onnx-path /path/to/unified_pipeline.onnx \\
             --motion-path /path/to/motion.motion
     """
 
     robot: str = "g1"
-    env: G1MujocoEnvCfg = G1MujocoEnvCfg(born_place_align=False)
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg(
+        born_place_align=False,
+        random_heading=True,
+    )
+    ctrl: list[KeyboardCtrlCfg] = [
+        KeyboardCtrlCfg(
+            triggers={
+                "r": "[MOTION_RESET]",
+                "i": "[SIM_REBORN]",
+                "o": "[SHUTDOWN]",
+                "<": "[MOTION_FADE_IN]",
+                ">": "[MOTION_FADE_OUT]",
+            },
+        ),
+    ]
+
     policy: ProtoMotionsTrackerPolicyCfg = ProtoMotionsTrackerPolicyCfg()
-    ctrl: list[KeyboardCtrlCfg] = [KeyboardCtrlCfg()]
 
 
 @cfg_registry.register
@@ -366,8 +379,7 @@ class g1_protomotions_tracker_real(g1_protomotions_tracker):
 
     Usage::
 
-        cd robojudo && python scripts/run_tracker_pipeline.py \\
-            -c g1_protomotions_tracker_real \\
+        cd robojudo && python scripts/run_pipeline.py -c g1_protomotions_tracker_real \\
             --onnx-path /path/to/unified_pipeline.onnx \\
             --motion-path /path/to/motion.motion
     """
