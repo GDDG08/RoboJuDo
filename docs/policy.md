@@ -17,6 +17,7 @@ We provide the following policies:
 - [ASAPPolicy](#policy--asappolicy)
 - [KungfuBotGeneralPolicy](#policy--kungfubotgeneralpolicy)
 - [TwistPolicy](#policy--twistpolicy)
+- [ProtoMotionsTrackerPolicy](#policy--protomotionstrackerpolicy)
 
 ## [Policy](#policy) > [UnitreePolicy](#policy--unitreepolicy)
 
@@ -202,3 +203,60 @@ For TwistPolicy, we implement two motion source controllers:
     - motions from [PBHC](https://github.com/TeleHuman/PBHC) pipeline is supported,  put your motion files in `assets/motions/g1/phc/`.
 
 You can refer to `g1_twist` config in [g1_cfg.py](../robojudo/config/g1/g1_cfg.py) for test and details.
+
+## [Policy](#policy) > [ProtoMotionsTrackerPolicy](#policy--protomotionstrackerpolicy)
+
+> Thanks to [NVLabs](https://github.com/NVlabs) for ProtoMotions, and to [Chen Tessler](https://github.com/tesslerc) and [Yifeng Jiang](https://github.com/jyf588) for contributing this RoboJuDo integration.
+
+`ProtoMotionsTrackerPolicy` deploys a [ProtoMotions](https://github.com/NVlabs/ProtoMotions) tracker exported as a unified ONNX pipeline.
+
+
+For the full deployment walkthrough, please read the official ProtoMotions docs first:
+
+- [ProtoMotions G1 deployment workflow](https://nvlabs.github.io/ProtoMotions/tutorials/workflows/g1_deployment.html#step-5-deploy-via-robojudo-simulation)
+- [NVLabs / ProtoMotions](https://github.com/NVlabs/ProtoMotions)
+
+> **Important:** You must clone the `ProtoMotions` repository locally as a sibling directory named `protomotions`. RoboJuDo imports `deployment.motion_utils` and `deployment.state_utils` from that checkout at runtime.
+
+
+### Core files
+
+- policy implementation: [protomotions_tracker_policy.py](../robojudo/policy/protomotions_tracker_policy.py)
+- policy config: [g1_protomotions_tracker_cfg.py](../robojudo/config/g1/policy/g1_protomotions_tracker_cfg.py)
+- pipeline configs: [g1_cfg.py](../robojudo/config/g1/g1_cfg.py)
+- launcher: [run_tracker_pipeline.py](../scripts/run_tracker_pipeline.py)
+- built-in tracker assets:
+  - `assets/models/g1/protomotions_tracker/unified_pipeline.onnx`
+  - `assets/models/g1/protomotions_tracker/unified_pipeline.yaml`
+  - `assets/motions/g1/g1_bones_seed_mini.pt`
+
+### How to run
+
+This repository uses the following built-in configs:
+
+- `g1_protomotions_tracker` for MuJoCo simulation
+- `g1_protomotions_tracker_real` for real G1 deployment
+
+Simulation:
+
+```bash
+python scripts/run_tracker_pipeline.py -c g1_protomotions_tracker \
+ --motion-path assets/motions/g1/g1_bones_seed_mini.pt \
+ --motion-index 0
+```
+
+Real robot:
+
+```bash
+python scripts/run_tracker_pipeline.py -c g1_protomotions_tracker_real \
+  --motion-path assets/motions/g1/g1_bones_seed_mini.pt \
+  --motion-index 0
+```
+
+To test your own exported tracker, add:
+
+```bash
+--onnx-path /path/to/unified_pipeline.onnx
+```
+
+
