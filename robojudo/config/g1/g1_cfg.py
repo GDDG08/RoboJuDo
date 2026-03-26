@@ -26,9 +26,9 @@ from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg  # n
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
 from .policy.g1_h2h_policy_cfg import G1H2HPolicyCfg  # noqa: F401
 from .policy.g1_kungfubot_policy_cfg import G1KungfuBotGeneralPolicyCfg, G1KungfuBotPolicyCfg  # noqa: F401
+from .policy.g1_protomotions_tracker_cfg import ProtoMotionsTrackerPolicyCfg  # noqa: F401
 from .policy.g1_smooth_policy_cfg import G1SmoothPolicyCfg  # noqa: F401
 from .policy.g1_twist_policy_cfg import G1TwistPolicyCfg  # noqa: F401
-from .policy.g1_protomotions_tracker_cfg import ProtoMotionsTrackerPolicyCfg  # noqa: F401
 from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg, G1UnitreeWoGaitPolicyCfg  # noqa: F401
 
 
@@ -336,9 +336,6 @@ class g1_switch_beyondmimic(RlMultiPolicyPipelineCfg):
     ]
 
 
-# TIPS: check g1_loco_mimic_cfg.py for more complex examples
-
-
 # ======================== ProtoMotions Tracker ======================== #
 
 
@@ -386,3 +383,6 @@ class g1_protomotions_tracker_real(g1_protomotions_tracker):
         UnitreeCtrlCfg(),
     ]
     do_safety_check: bool = True
+
+
+# TIPS: check g1_loco_mimic_cfg.py for more complex examples

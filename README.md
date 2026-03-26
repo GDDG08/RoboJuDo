@@ -53,6 +53,9 @@ Our framework highlights:
 
 # 🗺️Roadmap
 
+> **2026.03 Update**: We added built-in support for deploying the [ProtoMotions](https://github.com/NVlabs/ProtoMotions) G1 tracker in RoboJuDo. Thanks to [NVLabs](https://github.com/NVlabs) for the great work on ProtoMotions, and thanks to [Chen Tessler](https://github.com/tesslerc) and [Yifeng Jiang](https://github.com/jyf588) for contributing this integration.
+
+
 <table>
 <tr>
 <td width="80%">
@@ -68,8 +71,9 @@ Our framework highlights:
   - [x] Preserve original keyboard and joystick mappings
   - [x] Support for **KungfuBot**
 - [x] Add policy-switch pipeline with interpolation, check [LocoMimic Example](#loco-mimic-policy-switch-with-interpolation)!
-- [x] [2025.11] Add support for **KungfuBot2** ✨, check [KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy)!
-- [x] [2025.11] Add support for **TWIST** ✨, check [TwistPolicy](./docs/policy.md/#policy--twistpolicy)!
+- [x] [2025.11] Add support for **KungfuBot2** , check [KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy)!
+- [x] [2025.11] Add support for **TWIST** , check [TwistPolicy](./docs/policy.md/#policy--twistpolicy)!
+- [x] [2026.03] Add support for **ProtoMotions** ✨, check [ProtoMotions Tracker](#protomotions-tracker) and [ProtoMotionsTrackerPolicy](./docs/policy.md/#policy--protomotionstrackerpolicy)!
 - [ ] Release code for **HugWBC**
 - [ ] Release code for **GMT**
 - [ ] Upcoming policies...
@@ -125,6 +129,7 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | **ASAP** | 🖥️ 🤖 | - | - | [ASAP](https://github.com/LeCAR-Lab/ASAP) | [AsapPolicy](./docs/policy.md/#policy--asappolicy) | deepmimic & locomotion supported |
 | KungfuBot<br>**KungfuBot2** | 🖥️ 🤖 | - | - | [PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy)<br>[KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy) | Need PHC submodule |
 | **TWIST** | 🖥️ 🤖 | - | - | [TWIST](https://github.com/YanjieZe/TWIST) | [TwistPolicy](./docs/policy.md/#policy--twistpolicy) |  |
+| **ProtoMotions** | 🖥️ 🤖 | - | - | [ProtoMotions](https://github.com/NVlabs/ProtoMotions) | [ProtoMotionsTrackerPolicy](./docs/policy.md/#policy--protomotionstrackerpolicy) | [nvlab doc](https://nvlabs.github.io/ProtoMotions/tutorials/workflows/g1_deployment.html) |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 
@@ -336,8 +341,22 @@ We have the same Keyboard control as ASAP:
 
 We also provide config files for other policies, check [config_g1](robojudo/config/g1) and [config_h1](robojudo/config/h1) for more details.
 
+#### ASAP
 In RoboJuDo, we have fully replicated ASAP’s Sim2Real workflow, including all motions. 
 Please refer to `g1_locomimic_asap_full` in [g1_loco_mimic_cfg.py](robojudo/config/g1/g1_loco_mimic_cfg.py). This highlights the modular advantages of our framework.
+
+#### ProtoMotions Tracker
+Please first follow the official workflow from [NVLabs / ProtoMotions](https://nvlabs.github.io/ProtoMotions/tutorials/workflows/g1_deployment.html) and clone the `ProtoMotions` repo as a sibling directory named `protomotions`.
+
+Then you can run the built-in RoboJuDo config directly:
+
+```bash
+python scripts/run_tracker_pipeline.py -c g1_protomotions_tracker \
+  --motion-path assets/motions/g1/g1_bones_seed_mini.pt \
+  --motion-index 0
+```
+
+For more details, check [ProtoMotionsTrackerPolicy](./docs/policy.md/#policy--protomotionstrackerpolicy).
 
 
 # 🧩Develop and Contribute
@@ -384,3 +403,4 @@ or star our repo😁
 - [PHC](https://github.com/ZhengyiLuo/PHC): used for implementing the `MotionCtrl` module for OmniH2O.
 - [UnitreeCpp](https://github.com/HansZ8/unitree_cpp): our pybind of `unitree_sdk2` used in `UnitreeCppEnv`.
 - [ZED Proxy](https://github.com/HansZ8/ZED-Proxy/): ZED Camera Odometry Service.
+- [ProtoMotions](https://github.com/NVlabs/ProtoMotions): GPU-accelerated simulation and learning framework by NVLabs.

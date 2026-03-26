@@ -22,6 +22,7 @@ Sensor requirements (real G1)
 - ``env_data.torso_quat`` (xyzw) -- FK-computed (requires ``update_with_fk=True``)
 """
 
+import importlib
 import logging
 import sys
 from pathlib import Path
@@ -30,6 +31,12 @@ import numpy as np
 import onnxruntime as ort
 import yaml
 
+from robojudo.policy import Policy, policy_registry
+from robojudo.policy.policy_cfgs import PolicyCfg
+from robojudo.tools.tool_cfgs import DoFConfig
+
+logger = logging.getLogger(__name__)
+
 # Add the protomotions repo root to sys.path so deployment.* is importable.
 # robojudo/robojudo/policy/this_file.py -> parents[2] = robojudo repo root
 # protomotions is expected as a sibling: ../protomotions
@@ -37,16 +44,22 @@ _PROTO_ROOT = str(Path(__file__).resolve().parents[2].parent / "protomotions")
 if _PROTO_ROOT not in sys.path:
     sys.path.insert(0, _PROTO_ROOT)
 
-from deployment.motion_utils import MotionPlayer
-from deployment.state_utils import (
+
+try:
+    importlib.import_module("deployment")
+except ModuleNotFoundError:
+    logger.error(
+        "Missing ProtoMotions source repository: cannot import 'deployment'. "
+        "Please clone the original 'protomotions' repo as a sibling directory "
+        f"next to this repo (expected path: {_PROTO_ROOT})."
+    )
+    raise RuntimeError("Cannot import 'deployment' from ProtoMotions repo!") from None
+
+from deployment.motion_utils import MotionPlayer  # noqa: E402
+from deployment.state_utils import (  # noqa: E402
     apply_heading_offset_np,
     compute_yaw_offset_np,
 )
-from robojudo.policy import Policy, policy_registry
-from robojudo.policy.policy_cfgs import PolicyCfg
-from robojudo.tools.tool_cfgs import DoFConfig
-
-logger = logging.getLogger(__name__)
 
 
 @policy_registry.register
