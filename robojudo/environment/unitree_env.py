@@ -259,7 +259,7 @@ class UnitreeEnv(Environment):
             if self.zed_odometry.is_valid:
                 # born place aligned in zed_odometry
                 self._base_pos = self.zed_odometry.pos
-                self._lin_vel = self.zed_odometry.lin_vel
+                self._base_lin_vel = self.zed_odometry.lin_vel
         elif self._odometry_type == "DUMMY":
             self._base_pos = np.array([0.0, 0.0, 0.8])
             self._base_lin_vel = np.array([0.0, 0.0, 0.0])
@@ -267,8 +267,7 @@ class UnitreeEnv(Environment):
             base_pos = np.array(self.sport_state.position, dtype=np.float32)
             lin_vel = np.array(self.sport_state.velocity, dtype=np.float32)
             self._base_lin_vel = quat_rotate_inverse_np(self.base_quat, lin_vel)
-            if self.born_place_align:
-                self._base_pos = self.base_align.align_pos(base_pos)
+            self._base_pos = self.base_align.align_pos(base_pos) if self.born_place_align else base_pos
 
         # FK
         if self.update_with_fk:
