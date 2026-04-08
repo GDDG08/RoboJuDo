@@ -289,3 +289,6 @@ class ProtoMotionsTrackerPolicy(Policy):
 
     def get_init_dof_pos(self):
         return self._player.get_state_at_frame(0)["dof_pos"].copy()
+    
+    def set_pause(self, pause: bool = True):
+        self._paused = pause

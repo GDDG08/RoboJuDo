@@ -197,7 +197,7 @@ class RlPipeline(Pipeline):
             last_step_time = time.time()
             pbar.update()
 
-            if t == 0.9 * traj_len:
+            if t == traj_len - 1:
                 logger.info(f"{'=' * 10} RESET ZERO POSITION {'=' * 10}")
                 self.reset()
 
@@ -205,6 +205,22 @@ class RlPipeline(Pipeline):
         pbar.close()
         logger.warning("prepare_done")
 
+        # pause motion reference playback 0 and start balancing
+        if hasattr(self.policy.policy, "set_pause"):
+            balance_time = 3.0
+            self.policy.reset_alignment()
+            self.policy.policy.set_pause(True)
+            logger.warning("controller_start")
+            logger.info("Motion playback paused - balancing robot at init pose")
+            last_step_time = time.time()
+            for _ in range(int(self.freq * balance_time)):
+                self.step()
+                time_diff = last_step_time + self.dt - time.time()
+                if time_diff > 0:
+                    time.sleep(time_diff)
+                last_step_time = time.time()
+            self.policy.policy.set_pause(False)
+            logger.info("Motion playback starting")
 
 if __name__ == "__main__":
     pass
