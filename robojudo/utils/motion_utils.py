@@ -220,28 +220,7 @@ class MotionPlayer:
         )
 
     def _load_raw(self, data: dict, motion_index: int, control_dt: float) -> None:
-        """Load from a raw ProtoMotions motion file and resample.
-
-        This path requires ``protomotions`` to be importable (for interpolation
-        utilities).  Use :meth:`cache_to_file` afterwards to create a cached
-        version that needs no external dependencies.
-        """
-        import torch
-
-        try:
-            from protomotions.utils.motion_interpolation_utils import (
-                calc_frame_blend,
-                interpolate_pos,
-                interpolate_quat,
-            )
-        except ImportError:
-            raise ImportError(
-                "Loading raw (non-cached) motion files requires the 'protomotions' "
-                "package for interpolation.  Either:\n"
-                "  1. Use a pre-cached .pt file (recommended), or\n"
-                "  2. Install protomotions: pip install protomotions"
-            ) from None
-
+        """Load from a raw ProtoMotions motion file and resample."""
         self._control_dt = control_dt
         self._cached = False
 
@@ -252,27 +231,26 @@ class MotionPlayer:
 
             start  = int(length_starts[motion_index].item())
             nf     = int(motion_num_frames[motion_index].item())
-            end    = start + nf
             src_dt = float(motion_dt_all[motion_index].item())
 
-            gts  = data["gts"][start:end]
-            grs  = data["grs"][start:end]
-            gvs  = data["gvs"][start:end]
-            gavs = data["gavs"][start:end]
-            dps  = data["dps"][start:end]
-            dvs  = data["dvs"][start:end]
+            gts  = np.asarray(data["gts"][start:start + nf],  dtype=np.float32)
+            grs  = np.asarray(data["grs"][start:start + nf],  dtype=np.float32)
+            gvs  = np.asarray(data["gvs"][start:start + nf],  dtype=np.float32)
+            gavs = np.asarray(data["gavs"][start:start + nf], dtype=np.float32)
+            dps  = np.asarray(data["dps"][start:start + nf],  dtype=np.float32)
+            dvs  = np.asarray(data["dvs"][start:start + nf],  dtype=np.float32)
             motion_length = src_dt * (nf - 1)
 
         elif "rigid_body_pos" in data:
             fps    = float(data["fps"])
             src_dt = 1.0 / fps
 
-            gts  = data["rigid_body_pos"]
-            grs  = data["rigid_body_rot"]
-            gvs  = data["rigid_body_vel"]
-            gavs = data["rigid_body_ang_vel"]
-            dps  = data["dof_pos"]
-            dvs  = data["dof_vel"]
+            gts  = np.asarray(data["rigid_body_pos"],     dtype=np.float32)
+            grs  = np.asarray(data["rigid_body_rot"],      dtype=np.float32)
+            gvs  = np.asarray(data["rigid_body_vel"],      dtype=np.float32)
+            gavs = np.asarray(data["rigid_body_ang_vel"],  dtype=np.float32)
+            dps  = np.asarray(data["dof_pos"],             dtype=np.float32)
+            dvs  = np.asarray(data["dof_vel"],             dtype=np.float32)
             nf   = gts.shape[0]
             motion_length = src_dt * (nf - 1)
         else:
@@ -282,48 +260,48 @@ class MotionPlayer:
                 "  - single-motion:   keys 'rigid_body_pos', 'fps', 'dof_pos', ..."
             )
 
+        # Resample to control rate (lerp for positions, slerp for quaternions)
         num_ctrl_frames = max(1, int(round(motion_length / control_dt)) + 1)
-        ctrl_times = torch.linspace(0.0, motion_length, num_ctrl_frames)
+        ctrl_times = np.linspace(0.0, motion_length, num_ctrl_frames)
 
-        motion_len_t  = torch.tensor([motion_length])
-        num_frames_t  = torch.tensor([nf])
-        motion_dt_t   = torch.tensor([src_dt])
+        phase = np.clip(ctrl_times / motion_length, 0.0, 1.0)
+        f0 = (phase * (nf - 1)).astype(np.int64)
+        f1 = np.minimum(f0 + 1, nf - 1)
+        blend = ((ctrl_times - f0 * src_dt) / src_dt).astype(np.float32)
 
-        f0_list, f1_list, blend_list = [], [], []
-        for t in ctrl_times:
-            t_t = t.unsqueeze(0)
-            f0, f1, bl = calc_frame_blend(t_t, motion_len_t, num_frames_t, motion_dt_t)
-            f0_list.append(f0)
-            f1_list.append(f1)
-            blend_list.append(bl)
+        def _lerp(src):
+            b = blend.reshape(-1, *([1] * (src.ndim - 1)))
+            return ((1.0 - b) * src[f0] + b * src[f1]).astype(np.float32)
 
-        f0    = torch.cat(f0_list)
-        f1    = torch.cat(f1_list)
-        blend = torch.cat(blend_list)
+        def _slerp(src):
+            q0, q1 = src[f0], src[f1]
+            cos_half = np.sum(q0 * q1, axis=-1, keepdims=True)
+            # Flip to shortest path
+            neg = cos_half < 0
+            q1 = np.where(neg, -q1, q1)
+            cos_half = np.abs(cos_half)
+            half_theta = np.arccos(np.clip(cos_half, -1.0, 1.0))
+            sin_half = np.sqrt(np.maximum(1.0 - cos_half * cos_half, 0.0))
+            b = blend.reshape(-1, *([1] * (q0.ndim - 1)))
+            # Safe divide — degenerate cases handled by np.where below
+            safe_sin = np.where(sin_half > 0, sin_half, 1.0)
+            ratio_a = np.sin((1.0 - b) * half_theta) / safe_sin
+            ratio_b = np.sin(b * half_theta) / safe_sin
+            result = ratio_a * q0 + ratio_b * q1
+            # Fallback: near-zero sin_half → linear blend; cos_half ≈ 1 → q0
+            near_zero = np.abs(sin_half) < 0.001
+            linear = 0.5 * q0 + 0.5 * q1
+            result = np.where(near_zero, linear, result)
+            identical = np.abs(cos_half) >= 1.0
+            result = np.where(identical, q0, result)
+            return result.astype(np.float32)
 
-        def _interp_pos(src):
-            s0 = src[f0]
-            s1 = src[f1]
-            return interpolate_pos(s0, s1, blend)
-
-        def _interp_quat(src):
-            s0 = src[f0]
-            s1 = src[f1]
-            return interpolate_quat(s0, s1, blend)
-
-        body_pos     = _interp_pos(gts)
-        body_rot     = _interp_quat(grs)
-        body_vel     = _interp_pos(gvs)
-        body_ang_vel = _interp_pos(gavs)
-        dof_pos      = _interp_pos(dps)
-        dof_vel      = _interp_pos(dvs)
-
-        self._dof_pos      = dof_pos.numpy().astype(np.float32)
-        self._dof_vel      = dof_vel.numpy().astype(np.float32)
-        self._body_rot     = body_rot.numpy().astype(np.float32)
-        self._body_pos     = body_pos.numpy().astype(np.float32)
-        self._body_vel     = body_vel.numpy().astype(np.float32)
-        self._body_ang_vel = body_ang_vel.numpy().astype(np.float32)
+        self._body_pos     = _lerp(gts)
+        self._body_rot     = _slerp(grs)
+        self._body_vel     = _lerp(gvs)
+        self._body_ang_vel = _lerp(gavs)
+        self._dof_pos      = _lerp(dps)
+        self._dof_vel      = _lerp(dvs)
         self._num_frames   = num_ctrl_frames
 
         print(
