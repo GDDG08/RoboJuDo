@@ -114,7 +114,7 @@ _runtime:
     current.root_local_ang_vel, historical.processed_actions, mimic.future_anchor_ang_vel,
     mimic.future_anchor_pos, mimic.future_anchor_rot, mimic.future_anchor_vel, mimic.future_dof_pos,
     mimic.future_dof_vel, mimic.ref_anchor_pos]
-metadata: {checkpoint: exps/exp-20260314_230314/last.ckpt, control_type: BUILT_IN_PD}
+metadata: {checkpoint: exps/exp-20260326_191759/last.ckpt, control_type: BUILT_IN_PD}
 robot:
   mjcf_path: mjcf/g1_holo_compat.xml
   num_bodies: 33
