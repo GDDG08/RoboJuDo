@@ -22,11 +22,8 @@ Sensor requirements (real G1)
 - ``env_data.torso_quat`` (xyzw) -- FK-computed (requires ``update_with_fk=True``)
 """
 
-import importlib
 import logging
 import re
-import sys
-from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
@@ -35,33 +32,14 @@ import yaml
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import PolicyCfg
 from robojudo.tools.tool_cfgs import DoFConfig
-
-logger = logging.getLogger(__name__)
-
-# Add the protomotions repo root to sys.path so deployment.* is importable.
-# robojudo/robojudo/policy/this_file.py -> parents[2] = robojudo repo root
-# protomotions is expected as a sibling: ../protomotions
-_PROTO_ROOT = str(Path(__file__).resolve().parents[2].parent / "protomotions")
-if _PROTO_ROOT not in sys.path:
-    sys.path.insert(0, _PROTO_ROOT)
-
-
-try:
-    importlib.import_module("deployment")
-except ModuleNotFoundError:
-    logger.error(
-        "Missing ProtoMotions source repository: cannot import 'deployment'. "
-        "Please clone the original 'protomotions' repo as a sibling directory "
-        f"next to this repo (expected path: {_PROTO_ROOT})."
-    )
-    raise RuntimeError("Cannot import 'deployment' from ProtoMotions repo!") from None
-
-from deployment.motion_utils import MotionPlayer  # noqa: E402
-from deployment.state_utils import (  # noqa: E402
+from robojudo.utils.motion_utils import (
+    MotionPlayer,
     _extract_yaw_quat_np,
     apply_heading_offset_np,
     compute_yaw_offset_np,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @policy_registry.register
@@ -156,17 +134,21 @@ class ProtoMotionsTrackerPolicy(Policy):
         self._heading_offset = None
         self.reset()
 
-    def _resolve_default_dof_pos(self, joint_names: list[str]) -> np.ndarray:
-        """Resolve default DOF positions from protomotions G1 robot config.
+    # G1 default standing pose (from protomotions.robot_configs.g1)
+    _G1_DEFAULT_JOINT_POS = {
+        ".*_hip_pitch_joint": -0.312,
+        ".*_knee_joint": 0.669,
+        ".*_ankle_pitch_joint": -0.363,
+        ".*_elbow_joint": 0.6,
+        "left_shoulder_roll_joint": 0.2,
+        "left_shoulder_pitch_joint": 0.2,
+        "right_shoulder_roll_joint": -0.2,
+        "right_shoulder_pitch_joint": 0.2,
+    }
 
-        Uses regex-pattern matching from the robot config's DEFAULT_JOINT_POS
-        against the policy's joint names.
-        """
-        try:
-            from protomotions.robot_configs.g1 import DEFAULT_JOINT_POS
-        except ImportError:
-            logger.warning("[TrackerPolicy] Could not import G1 robot config — default pose will be zeros")
-            return np.zeros(len(joint_names), dtype=np.float32)
+    def _resolve_default_dof_pos(self, joint_names: list[str]) -> np.ndarray:
+        """Resolve default DOF positions via regex-pattern matching."""
+        DEFAULT_JOINT_POS = self._G1_DEFAULT_JOINT_POS
 
         default_pos = np.zeros(len(joint_names), dtype=np.float32)
         for pattern, value in DEFAULT_JOINT_POS.items():
