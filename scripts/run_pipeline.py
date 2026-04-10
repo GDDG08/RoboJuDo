@@ -46,6 +46,9 @@ def main():
 
     if not cfg.env.is_sim:
         pipeline.prepare()
+    elif getattr(pipeline, "_has_default_pose_mode", False):
+        pipeline._set_default_pose_mode(True)
+        logger.warning("Sim mode — holding default pose, press R to start motion")
 
     while True:
         time_start = time.time()
