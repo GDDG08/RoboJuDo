@@ -1,7 +1,8 @@
 """Run a ProtoMotions tracker policy.
 
-Extends the generic pipeline runner with tracker-specific CLI overrides
-for ONNX model, motion file, and motion index.
+Extends the generic pipeline runner with tracker-specific features:
+- CLI overrides for ONNX model, motion file, and motion index
+- Default-pose mode: hold standing pose until R is pressed
 
 Usage::
 
@@ -84,6 +85,10 @@ def main():
 
     if not cfg.env.is_sim:
         pipeline.prepare()
+    elif pipeline._has_default_pose_mode:
+        # In sim without prepare: hold default pose until R is pressed.
+        pipeline._set_default_pose_mode(True)
+        logger.warning("Sim mode — holding default pose, press R to start motion")
 
     while True:
         time_start = time.time()

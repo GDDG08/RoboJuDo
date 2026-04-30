@@ -22,10 +22,8 @@ Sensor requirements (real G1)
 - ``env_data.torso_quat`` (xyzw) -- FK-computed (requires ``update_with_fk=True``)
 """
 
-import importlib
 import logging
-import sys
-from pathlib import Path
+import re
 
 import numpy as np
 import onnxruntime as ort
@@ -34,32 +32,14 @@ import yaml
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import PolicyCfg
 from robojudo.tools.tool_cfgs import DoFConfig
-
-logger = logging.getLogger(__name__)
-
-# Add the protomotions repo root to sys.path so deployment.* is importable.
-# robojudo/robojudo/policy/this_file.py -> parents[2] = robojudo repo root
-# protomotions is expected as a sibling: ../protomotions
-_PROTO_ROOT = str(Path(__file__).resolve().parents[2].parent / "protomotions")
-if _PROTO_ROOT not in sys.path:
-    sys.path.insert(0, _PROTO_ROOT)
-
-
-try:
-    importlib.import_module("deployment")
-except ModuleNotFoundError:
-    logger.error(
-        "Missing ProtoMotions source repository: cannot import 'deployment'. "
-        "Please clone the original 'protomotions' repo as a sibling directory "
-        f"next to this repo (expected path: {_PROTO_ROOT})."
-    )
-    raise RuntimeError("Cannot import 'deployment' from ProtoMotions repo!") from None
-
-from deployment.motion_utils import MotionPlayer  # noqa: E402
-from deployment.state_utils import (  # noqa: E402
+from robojudo.utils.motion_utils import (
+    MotionPlayer,
+    _extract_yaw_quat_np,
     apply_heading_offset_np,
     compute_yaw_offset_np,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @policy_registry.register
@@ -148,8 +128,46 @@ class ProtoMotionsTrackerPolicy(Policy):
             f"anchor_idx={self._anchor_idx}, root_idx={self._root_idx}"
         )
 
+        # Resolve default standing pose from protomotions robot config.
+        self._default_dof_pos = self._resolve_default_dof_pos(joint_names)
+
         self._heading_offset = None
         self.reset()
+
+    # G1 default standing pose (from protomotions.robot_configs.g1)
+    _G1_DEFAULT_JOINT_POS = {
+        ".*_hip_pitch_joint": -0.312,
+        ".*_knee_joint": 0.669,
+        ".*_ankle_pitch_joint": -0.363,
+        ".*_elbow_joint": 0.6,
+        "left_shoulder_roll_joint": 0.2,
+        "left_shoulder_pitch_joint": 0.2,
+        "right_shoulder_roll_joint": -0.2,
+        "right_shoulder_pitch_joint": 0.2,
+    }
+
+    def _resolve_default_dof_pos(self, joint_names: list[str]) -> np.ndarray:
+        """Resolve default DOF positions via regex-pattern matching."""
+        DEFAULT_JOINT_POS = self._G1_DEFAULT_JOINT_POS
+
+        default_pos = np.zeros(len(joint_names), dtype=np.float32)
+        for pattern, value in DEFAULT_JOINT_POS.items():
+            for i, name in enumerate(joint_names):
+                if re.fullmatch(pattern, name):
+                    default_pos[i] = value
+        logger.info(f"[TrackerPolicy] resolved default DOF pos: {default_pos}")
+        return default_pos
+
+    def set_default_pose_mode(self, enabled: bool):
+        """Switch between tracking real motion and holding default pose.
+
+        When enabled, the policy sees synthetic references for the default
+        standing pose instead of the real motion.  Used during prepare/rampdown.
+        """
+        self._default_pose_mode = enabled
+        if enabled:
+            self._motion_done = False
+        logger.info(f"[TrackerPolicy] default_pose_mode={'ON' if enabled else 'OFF'}")
 
     def reset(self):
         self._frame = 0
@@ -160,12 +178,13 @@ class ProtoMotionsTrackerPolicy(Policy):
         self._prev_actions = np.zeros(self.num_actions, dtype=np.float32)
         self._motion_done = False
         self._paused = False
+        self._default_pose_mode = False
 
     def reset_alignment(self):
         self._heading_offset = None
 
     def post_step_callback(self, commands=None):
-        if not self._paused:
+        if not self._paused and not self._default_pose_mode:
             self._frame += 1
             if self._frame >= self._player.total_frames:
                 self._frame = self._player.total_frames - 1
@@ -177,13 +196,9 @@ class ProtoMotionsTrackerPolicy(Policy):
     def get_observation(self, env_data, ctrl_data):
         # -- Heading alignment (first step after reset) --
         if self._heading_offset is None:
-            motion_anchor_rot = self._player.get_state_at_frame(0)["body_rot"][
-                self._anchor_idx
-            ]
+            motion_anchor_rot = self._player.get_state_at_frame(0)["body_rot"][self._anchor_idx]
             robot_anchor_rot = self._get_anchor_quat(env_data)
-            self._heading_offset = compute_yaw_offset_np(
-                robot_anchor_rot, motion_anchor_rot
-            )
+            self._heading_offset = compute_yaw_offset_np(robot_anchor_rot, motion_anchor_rot)
 
         # -- State from env_data (already xyzw) --
         anchor_rot = self._get_anchor_quat(env_data)
@@ -195,23 +210,29 @@ class ProtoMotionsTrackerPolicy(Policy):
         # as root_local_ang_vel -- NO quat_rotate_inverse needed.
         root_local_ang_vel = np.asarray(env_data.base_ang_vel, dtype=np.float32)
 
-        # -- Future motion references with heading alignment --
-        # Clamp each future step so it never exceeds the last valid frame.
-        # This repeats the last frame's references at end-of-motion instead
-        # of going out of bounds.
-        last_frame = self._player.total_frames - 1
-        clamped_steps = [
-            min(self._frame + step, last_frame) - self._frame
-            for step in self._future_step_indices
-        ]
-        future_refs = self._player.get_future_references(
-            self._frame, clamped_steps
-        )
-        future_body_rot = apply_heading_offset_np(
-            self._heading_offset, future_refs["body_rot"]
-        )
-        # Anchor-body-only rotation: [num_steps, 4]
-        future_anchor_rot = future_body_rot[:, self._anchor_idx, :]
+        if self._default_pose_mode:
+            # -- Synthetic references: hold default standing pose --
+            # Target DOFs = default standing pose, velocities = zero,
+            # anchor rotation = yaw-only from robot's current anchor (hold
+            # heading but neutral pitch/roll for stable upright standing).
+            num_steps = len(self._future_step_indices)
+            anchor_yaw_only = _extract_yaw_quat_np(anchor_rot)
+            future_anchor_rot = np.tile(anchor_yaw_only, (num_steps, 1))
+            future_dof_pos = np.tile(self._default_dof_pos, (num_steps, 1))
+            future_dof_vel = np.zeros_like(future_dof_pos)
+        else:
+            # -- Future motion references with heading alignment --
+            # Clamp each future step so it never exceeds the last valid frame.
+            # This repeats the last frame's references at end-of-motion instead
+            # of going out of bounds.
+            last_frame = self._player.total_frames - 1
+            clamped_steps = [min(self._frame + step, last_frame) - self._frame for step in self._future_step_indices]
+            future_refs = self._player.get_future_references(self._frame, clamped_steps)
+            future_body_rot = apply_heading_offset_np(self._heading_offset, future_refs["body_rot"])
+            # Anchor-body-only rotation: [num_steps, 4]
+            future_anchor_rot = future_body_rot[:, self._anchor_idx, :]
+            future_dof_pos = future_refs["dof_pos"]
+            future_dof_vel = future_refs["dof_vel"]
 
         # -- Build ONNX inputs --
         key_to_array = {
@@ -220,8 +241,8 @@ class ProtoMotionsTrackerPolicy(Policy):
             "current.anchor_rot": anchor_rot[None],
             "current.root_local_ang_vel": root_local_ang_vel[None],
             "mimic.future_anchor_rot": future_anchor_rot[None],
-            "mimic.future_dof_pos": future_refs["dof_pos"][None],
-            "mimic.future_dof_vel": future_refs["dof_vel"][None],
+            "mimic.future_dof_pos": future_dof_pos[None],
+            "mimic.future_dof_vel": future_dof_vel[None],
             "historical.processed_actions": self._prev_actions[None, None],
         }
         onnx_inputs = {}
@@ -261,7 +282,11 @@ class ProtoMotionsTrackerPolicy(Policy):
         self._stashed_pd_targets = pd_targets
         self._prev_actions = pd_targets.copy()
         extras = {
-            "CALLBACK": ["[MOTION_DONE]"] if self._motion_done else [],
+            "CALLBACK": (
+                ["[MOTION_DONE]"]
+                if self._motion_done and not self._default_pose_mode
+                else []
+            ),
         }
         dummy_obs = np.zeros(1, dtype=np.float32)
         return dummy_obs, extras

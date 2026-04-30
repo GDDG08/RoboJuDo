@@ -85,22 +85,53 @@ class RlPipeline(Pipeline):
         self.freq = self.cfg.policy.freq
         self.dt = 1.0 / self.freq
 
-        self.self_check()
         self.reset()
+        self.self_check()
+        self.policy.reset()  # reset frame counter after dry-run steps
 
     def self_check(self):
         self.env.self_check()
         for _ in range(10):
             self.step(dry_run=True)
 
+    def _inner_policy(self):
+        """Return the unwrapped inner Policy (e.g. ProtoMotionsTrackerPolicy)."""
+        return getattr(self.policy, "policy", self.policy)
+
+    @property
+    def _has_default_pose_mode(self) -> bool:
+        return hasattr(self._inner_policy(), "set_default_pose_mode")
+
+    def _set_default_pose_mode(self, enabled: bool):
+        """Enable/disable default-pose mode on the inner policy (if supported)."""
+        inner = self._inner_policy()
+        if hasattr(inner, "set_default_pose_mode"):
+            inner.set_default_pose_mode(enabled)
+
     def reset(self):
         logger.info("Pipeline reset")
         self.timestep = 0
 
         self.env.reset()
-        # self.env.reborn(init_qpos=[0.2, 0.2, 0.8] + [ 0.707, 0, 0, 0.707]) # FOR SIM DEBUG
         self.policy.reset()
         self.ctrl_manager.reset()
+
+        # Blend-out state: transitions policy → init pose at end of motion.
+        self._blend_out_active = False
+        self._blend_out_step = 0
+        self._blend_out_duration = int(5.0 * self.freq)  # 5 seconds
+
+        # For tracker policies with default-pose mode, ramp/blend target is
+        # the env's default standing pose.  Otherwise, use motion frame 0.
+        if self._has_default_pose_mode:
+            self._init_dof_pos = np.asarray(self.env.dof_cfg.default_pos, dtype=np.float32)
+        else:
+            self._init_dof_pos = np.asarray(self.policy.get_init_dof_pos(), dtype=np.float32)
+
+        self._pending_blend_in = False
+        self._blend_in_completed = False
+        self._user_fade_out = False  # True when fade-out was user-triggered (not auto)
+        self._prepare_seconds = None  # set by prepare() for re-use on reset
 
     def safety_check(self):
         if not self.do_safety_check:
@@ -128,6 +159,36 @@ class RlPipeline(Pipeline):
                         logger.warning("Simulation Env reborn!")
                         self.env.reborn()  # pyright: ignore[reportAttributeAccessIssue]
                         self.policy.reset_alignment()
+                case "[MOTION_RESET]" | "[MOTION_FADE_IN]":
+                    self._blend_out_active = False
+                    self._blend_out_step = 0
+                    self._user_fade_out = False
+                    if self._has_default_pose_mode:
+                        # Policy is already active — just switch target
+                        # from default pose to motion (instant, no blend).
+                        logger.info(
+                            f"{command} — starting motion from frame 0"
+                        )
+                        self._set_default_pose_mode(False)
+                    else:
+                        # Legacy path: full blend-in needed.
+                        logger.info(
+                            f"{command} — re-entering blend-in phase"
+                        )
+                        self._pending_blend_in = True
+                case "[MOTION_FADE_OUT]":
+                    if self._has_default_pose_mode:
+                        logger.info("Fade out — switching to default pose mode")
+                        self._set_default_pose_mode(True)
+                        self._user_fade_out = True
+                    elif not self._blend_out_active:
+                        logger.info("Fade out — blending to default pose")
+                        self._blend_out_active = True
+                        self._blend_out_step = 0
+                        self._user_fade_out = True
+                        inner = self._inner_policy()
+                        if hasattr(inner, "_paused"):
+                            inner._paused = True
 
         self.ctrl_manager.post_step_callback(ctrl_data)
 
@@ -158,34 +219,60 @@ class RlPipeline(Pipeline):
         obs, extras = self.policy.get_observation(env_data, ctrl_data)
         pd_target = self.policy.get_pd_target(obs)
 
+        # -- Detect motion done --
+        callbacks = extras.get("CALLBACK", [])
+        if "[MOTION_DONE]" in callbacks and not self._blend_out_active:
+            if self._has_default_pose_mode:
+                logger.info("Motion done — switching to default pose mode")
+                self._set_default_pose_mode(True)
+            else:
+                logger.info("Motion done — blending out to default pose")
+                self._blend_out_active = True
+                self._blend_out_step = 0
+
+        # -- Blend policy output → init pose (frame 0) --
+        if self._blend_out_active:
+            alpha = min(self._blend_out_step / max(self._blend_out_duration, 1), 1.0)
+            pd_target = (1 - alpha) * pd_target + alpha * self._init_dof_pos
+            self._blend_out_step += 1
+
         if not dry_run:
             self.env.step(pd_target, extras.get("hand_pose", None))
 
         self.post_step_callback(env_data, ctrl_data, extras, pd_target)
 
-    def prepare(self, init_motor_angle=None):
-        if init_motor_angle is not None:
-            desired_motor_angle = init_motor_angle
-        else:
-            desired_motor_angle = self.policy.get_init_dof_pos()
+        # Handle pending blend-in (after MOTION_RESET / FADE_IN).
+        if self._pending_blend_in:
+            self._pending_blend_in = False
+            self._run_blend_in()
+            self._blend_in_completed = True
 
-        # logger.info(f"{desired_motor_angle=}")
-        current_motor_angle = np.array(self.env.dof_pos)
-        # logger.info(f"{current_motor_angle=}")
+    def _run_blend_in(self):
+        """Phase 2 of prepare: blend from default pose to policy output.
 
-        traj_len = 1000
+        Policy runs in default-pose mode (if supported); frame stays at 0
+        (no post_step_callback).  After blend, switches to motion tracking.
+        """
+        secs = self._prepare_seconds or 3.0
+        blend_steps = int(secs * self.freq)
+
+        # Enter default-pose mode for the blend-in period.
+        self._set_default_pose_mode(True)
+
+        logger.warning(f"Blend-in: default DOF → policy ({blend_steps} steps, {secs:.1f}s)")
+        pbar = ProgressBar("Blend in", blend_steps)
+
         last_step_time = time.time()
-        logger.warning("prepare_init")
-        pbar = ProgressBar("Prepare", traj_len)
+        for t in range(blend_steps):
+            alpha = t / max(blend_steps - 1, 1)
 
-        for t in range(traj_len):
-            current_motor_angle = np.array(self.env.dof_pos)
+            self.env.update()
+            env_data = self.env.get_data()
+            ctrl_data = self.ctrl_manager.get_ctrl_data(env_data)
+            obs, extras = self.policy.get_observation(env_data, ctrl_data)
+            policy_pd = self.policy.get_pd_target(obs)
 
-            blend_ratio = np.minimum(t / 300, 1)
-            action = (1 - blend_ratio) * current_motor_angle + blend_ratio * desired_motor_angle
-
-            # warm up network
-            self.step(dry_run=True)
+            action = (1 - alpha) * self._init_dof_pos + alpha * policy_pd
 
             self.env.step(action)
 
@@ -196,14 +283,103 @@ class RlPipeline(Pipeline):
                 logger.error("Warning: frame drop")
             last_step_time = time.time()
             pbar.update()
-
-            if t == 0.9 * traj_len:
-                logger.info(f"{'=' * 10} RESET ZERO POSITION {'=' * 10}")
-                self.reset()
-
-        time.sleep(0.01)
         pbar.close()
-        logger.warning("prepare_done")
+
+        # Switch to motion tracking — policy sees the jump.
+        self._set_default_pose_mode(False)
+        logger.warning("Blend-in done — motion starting")
+
+    def prepare(self, init_motor_angle=None, prepare_seconds=None):
+        if init_motor_angle is not None:
+            desired_motor_angle = init_motor_angle
+        elif self._has_default_pose_mode:
+            # Ramp to the env's default standing pose (not motion frame 0).
+            desired_motor_angle = np.array(
+                self.env.dof_cfg.default_pos, dtype=np.float32
+            )
+        else:
+            desired_motor_angle = self.policy.get_init_dof_pos()
+
+        # Convert seconds to steps (at policy frequency).
+        # Default: 3s ramp + 5s blend.  CLI --prepare-seconds overrides both.
+        if prepare_seconds is not None:
+            ramp_steps = int(prepare_seconds * self.freq)
+            blend_steps = int(prepare_seconds * self.freq)
+        else:
+            ramp_steps = int(3.0 * self.freq)
+            blend_steps = int(5.0 * self.freq)
+
+        # ── Phase 1: Ramp joints to default pose ──
+        logger.warning(
+            f"prepare: phase 1 — ramp joints ({ramp_steps} steps, "
+            f"{ramp_steps / self.freq:.1f}s)"
+        )
+        pbar = ProgressBar("Prepare: ramp joints", ramp_steps)
+
+        last_step_time = time.time()
+        for t in range(ramp_steps):
+            current_motor_angle = np.array(self.env.dof_pos)
+            alpha = min(t / max(ramp_steps - 1, 1), 1.0)
+            action = (1 - alpha) * current_motor_angle + alpha * desired_motor_angle
+
+            self.env.step(action)
+
+            time_diff = last_step_time + self.dt - time.time()
+            if time_diff > 0:
+                time.sleep(time_diff)
+            else:
+                logger.error("Warning: frame drop")
+            last_step_time = time.time()
+            pbar.update()
+        pbar.close()
+
+        # Reset policy for a clean start — frame goes back to 0.
+        self.reset()
+        self._prepare_seconds = prepare_seconds  # restore after reset
+
+        # ── Phase 2: Blend in policy (holding default pose) ──
+        # Policy runs in default-pose mode (if supported): it sees synthetic
+        # references for the standing pose, not the real motion.
+        # Actions blend from raw default DOF to policy output.
+        self._set_default_pose_mode(True)
+
+        logger.warning(
+            f"prepare: phase 2 — blend policy ({blend_steps} steps, "
+            f"{blend_steps / self.freq:.1f}s)"
+        )
+        pbar = ProgressBar("Prepare: blend policy", blend_steps)
+
+        last_step_time = time.time()
+        for t in range(blend_steps):
+            alpha = t / max(blend_steps - 1, 1)
+
+            # Run policy observation + action (frame stays at 0).
+            self.env.update()
+            env_data = self.env.get_data()
+            ctrl_data = self.ctrl_manager.get_ctrl_data(env_data)
+            obs, extras = self.policy.get_observation(env_data, ctrl_data)
+            policy_pd = self.policy.get_pd_target(obs)
+
+            # Blend: default DOF → policy output
+            action = (1 - alpha) * desired_motor_angle + alpha * policy_pd
+
+            self.env.step(action)
+
+            # Do NOT call post_step_callback — frame stays at 0.
+
+            time_diff = last_step_time + self.dt - time.time()
+            if time_diff > 0:
+                time.sleep(time_diff)
+            else:
+                logger.error("Warning: frame drop")
+            last_step_time = time.time()
+            pbar.update()
+        pbar.close()
+
+        # ── Phase 3: Hold default pose — wait for R to start motion ──
+        # Stay in default-pose mode. Motion starts when [MOTION_RESET] is
+        # received (user presses R), which calls _set_default_pose_mode(False).
+        logger.warning("prepare done — holding default pose, press R to start motion")
 
 
 if __name__ == "__main__":

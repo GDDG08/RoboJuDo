@@ -50,8 +50,24 @@ class MujocoEnv(Environment):
             self.visualizer = None
 
         self.last_time = time.time()
+        self.random_heading = cfg_env.random_heading
+
+        self._apply_random_heading()
 
         self.update()  # get initial state
+
+    def _apply_random_heading(self):
+        """Rotate the root body by a random yaw if random_heading is enabled."""
+        if not self.random_heading:
+            return
+        yaw = np.random.uniform(0, 2 * np.pi)
+        c, s = np.cos(yaw / 2), np.sin(yaw / 2)
+        q = self.data.qpos[3:7].copy()  # MuJoCo [w, x, y, z]
+        # Pre-multiply by yaw rotation q_yaw=[c,0,0,s]: q_new = q_yaw ⊗ q
+        self.data.qpos[3] = c * q[0] - s * q[3]
+        self.data.qpos[4] = c * q[1] - s * q[2]
+        self.data.qpos[5] = c * q[2] + s * q[1]
+        self.data.qpos[6] = c * q[3] + s * q[0]
 
     def reborn(self, init_qpos=None):
         if init_qpos is not None:
@@ -60,6 +76,7 @@ class MujocoEnv(Environment):
             self.data.ctrl[:] = 0.0
         else:
             mujoco.mj_resetDataKeyframe(self.model, self.data, 0)  # pyright: ignore[reportAttributeAccessIssue]
+            self._apply_random_heading()
         mujoco.mj_forward(self.model, self.data)  # pyright: ignore[reportAttributeAccessIssue]
 
     def reset(self):
