@@ -1,4 +1,4 @@
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from robojudo.config import ASSETS_DIR, Config
 from robojudo.tools.tool_cfgs import DoFConfig
@@ -427,3 +427,56 @@ class TwistPolicyCfg(PolicyCfg):
     @property
     def mimic_obs_other_ids(self) -> list[int]:
         return [f for f in range(self.mimic_obs_total_degrees) if f not in self.mimic_obs_wrist_ids]
+
+
+class AgilePolicyCfg(PolicyCfg):
+    """Generic AGILE-exported policy: an IO-descriptor YAML + checkpoint (.pt / .onnx).
+
+    The YAML describes the observation terms, action term, and articulation defaults.
+    The checkpoint is one of: TorchScript MLP, TorchScript RNN, ONNX, or raw RSL-RL.
+    """
+
+    policy_type: str = "AgilePolicy"
+    disable_autoload: bool = True
+
+    yaml_path: str
+    """Absolute path to the AGILE-exported IO descriptor YAML."""
+
+    checkpoint_path: str
+    """Absolute path to the policy checkpoint (.pt TorchScript / raw RSL-RL or .onnx)."""
+
+    rnn_hidden_shape: list[int] | None = None
+    """Hidden-state shape for TorchScript RNN policies, e.g. ``[num_layers, batch, hidden]``.
+
+    Set this only when ``checkpoint_path`` is a TorchScript RNN export. For raw RSL-RL
+    checkpoints the architecture (and RNN shape) is auto-detected from the state dict.
+    """
+
+    command_remap: list[list[float]] = Field(default_factory=list)
+    """Per-axis joystick → command vector remap. Each row matches the form used by
+    :func:`robojudo.utils.util_func.command_remap`. Typically 3 rows for [vx, vy, wz]."""
+
+    command_defaults: dict[str, float] = Field(
+        default_factory=lambda: {
+            "linear_x": 0.0,
+            "linear_y": 0.0,
+            "angular_z": 0.0,
+            "height": 0.72,
+        }
+    )
+    """Fallback command vector entries when no controller provides input.
+
+    Keys used: ``linear_x``, ``linear_y``, ``angular_z``, ``height``.
+    """
+
+    action_beta: float = 1.0
+    """Action smoothing factor. ``1.0`` disables smoothing (AGILE default)."""
+
+    # obs_dof / action_dof are derived from the YAML in ``AgilePolicy.__init__`` —
+    # provide empty defaults so pydantic accepts the cfg.
+    obs_dof: DoFConfig = DoFConfig(joint_names=[])
+    action_dof: DoFConfig = DoFConfig(joint_names=[])
+
+    @property
+    def policy_file(self) -> str:
+        return self.checkpoint_path

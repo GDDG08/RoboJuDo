@@ -132,3 +132,7 @@ assets/motions
 logs
 MUJOCO_LOG.TXT
 assets/resources
+
+# AGILE policies are pulled at runtime by scripts/pull_agile_example_assets.py;
+# we do not commit the checkpoints or IO YAMLs into RoboJuDo.
+assets/models/g1/agile/
