@@ -3,6 +3,10 @@
 Consumes the AGILE deploy contract — an IO-descriptor YAML + checkpoint
 (TorchScript MLP/RNN, ONNX, or raw RSL-RL) — without importing the ``agile``
 Python package at runtime.
+
+The policy class is command-shape-agnostic: it composes a polymorphic
+:class:`AgileCommandSource` (velocity-height, motion-file, zero, …) instead of
+baking in any particular command semantics.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from robojudo.config import ROOT_DIR
 from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
 from robojudo.policy import Policy, policy_registry
 from robojudo.policy.policy_cfgs import AgilePolicyCfg
+from robojudo.policy.utils.agile_commands import build_command_source
 from robojudo.policy.utils.agile_io import (
     AgilePolicyRunner,
     AgileYamlObservationBuilder,
@@ -25,7 +30,6 @@ from robojudo.policy.utils.agile_io import (
     quat_xyzw_to_wxyz,
 )
 from robojudo.tools.tool_cfgs import DoFConfig
-from robojudo.utils.util_func import command_remap
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +42,9 @@ class AgilePolicy(Policy):
 
     @staticmethod
     def _auto_pull_assets(yaml_path: Path, ckpt_path: Path) -> None:
-        """Load and invoke the pull script's ``ensure_agile_assets`` helper.
+        """Invoke the pull script's ``ensure_agile_assets`` helper by file path.
 
-        ``scripts/`` is not a Python package, so we load it by file path. If a
+        ``scripts/`` is not a Python package, so we load it dynamically. If a
         sibling ``WBC_AGILE`` checkout (or ``$WBC_AGILE_DIR``) is available, the
         assets are auto-pulled. Otherwise the user is asked to run the script
         with ``--repo/--commit``.
@@ -101,7 +105,6 @@ class AgilePolicy(Policy):
             damping=[art["default_joint_damping"][i] for i in all_idx],
         )
 
-        # Inject derived DoFConfigs into the cfg (pydantic stores them on the cfg copy)
         cfg = cfg_policy.model_copy()
         cfg.obs_dof = obs_dof
         cfg.action_dof = action_dof
@@ -138,17 +141,18 @@ class AgilePolicy(Policy):
             rnn_hidden_shape=cfg_policy.rnn_hidden_shape,
         )
 
-        # Command-vector length: take it from the first command obs term.
-        self._command_dim = 0
-        for term in self._obs_builder.terms:
-            if term.name in (
-                "generated_commands",
-                "velocity_and_height_command",
-                "locomotion_command",
-                "navigation_command",
-            ):
-                self._command_dim = term.obs_dim
-                break
+        # --- Build the command source (single point of policy-shape decoupling) ---
+        self._command_dim = self._obs_builder.command_dim
+        self._command_source = build_command_source(
+            cfg_policy.command_source,
+            yaml=self._yaml,
+            command_dim=self._command_dim,
+            policy_dt=self.dt,
+            device=self.device,
+        )
+
+        # Latest CommandPayload returned by the source — surfaced for debug_viz.
+        self._last_payload = None
 
         self.reset()
 
@@ -159,84 +163,44 @@ class AgilePolicy(Policy):
     def reset(self):
         self._obs_builder.reset()
         self._policy_runner.reset()
+        if getattr(self, "_command_source", None) is not None:
+            self._command_source.reset()
         self.last_action = np.zeros(self.num_actions, dtype=np.float32)
-        # Push the zero last_action so terms have it available before the first step.
         self._obs_builder.set_last_action(torch.from_numpy(self.last_action.astype(np.float32)))
 
     def post_step_callback(self, commands=None):
-        # AGILE policies are stateless beyond RNN hidden / history; nothing else to advance.
-        return
+        # Advance any time-driven command source (motion playback, schedulers, …).
+        if getattr(self, "_command_source", None) is not None:
+            self._command_source.post_step()
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
-    def _get_command(self, ctrl_data) -> np.ndarray:
-        """Build the command vector for this policy from controller input.
-
-        Length matches the policy's command obs term. For velocity-only policies
-        we emit ``[vx, vy, wz]``; for velocity+height we additionally append
-        the configured target height.
-        """
-        defaults = self.cfg_policy.command_defaults
-        vx = float(defaults.get("linear_x", 0.0))
-        vy = float(defaults.get("linear_y", 0.0))
-        wz = float(defaults.get("angular_z", 0.0))
-        height = float(defaults.get("height", 0.72))
-
-        remap = self.cfg_policy.command_remap
-
-        for key, data in ctrl_data.items():
-            if key in ("JoystickCtrl", "UnitreeCtrl"):
-                axes = data["axes"]
-                lx, ly, rx = axes["LeftX"], axes["LeftY"], axes["RightX"]
-                if len(remap) >= 3:
-                    vx = float(command_remap(ly, remap[0]))
-                    vy = float(command_remap(lx, remap[1]))
-                    wz = float(command_remap(rx, remap[2]))
-                else:
-                    vx, vy, wz = float(ly), float(lx), float(rx)
-                break
-            if key == "KeyboardCtrl":
-                events = data.get("keyboard_event", [])
-                for event in events:
-                    if event.get("type") != "keyboard":
-                        continue
-                    pressed = float(event["pressed"]) * 1.0
-                    name = event["name"]
-                    if name == "w":
-                        vx = pressed
-                    elif name == "s":
-                        vx = -pressed
-                    elif name == "a":
-                        vy = -pressed
-                    elif name == "d":
-                        vy = pressed
-                    elif name == "e":
-                        wz = pressed
-                    elif name == "q":
-                        wz = -pressed
-                break
-
-        full = np.array([vx, vy, wz, height], dtype=np.float32)
-        if self._command_dim <= 0:
-            return full
-        if self._command_dim >= 4:
-            out = np.zeros(self._command_dim, dtype=np.float32)
-            out[:4] = full
-            return out
-        return full[: self._command_dim]
-
     def _build_sim_state(self, env_data) -> SimState:
         td = torch.device(self.device)
         root_quat_wxyz = quat_xyzw_to_wxyz(np.asarray(env_data.base_quat, dtype=np.float32))
         lin = env_data.get("base_lin_vel") if hasattr(env_data, "get") else getattr(env_data, "base_lin_vel", None)
+        # Anchor body pose — populated when available so motion-tracking terms work.
+        # RoboJuDo's env exposes torso_pos / torso_quat in xyzw; we convert to wxyz.
+        anchor_pos = None
+        anchor_quat = None
+        torso_pos = getattr(env_data, "torso_pos", None) if not hasattr(env_data, "get") else env_data.get("torso_pos")
+        torso_quat = (
+            getattr(env_data, "torso_quat", None) if not hasattr(env_data, "get") else env_data.get("torso_quat")
+        )
+        if torso_pos is not None:
+            anchor_pos = torch.from_numpy(np.asarray(torso_pos, dtype=np.float32)).to(td)
+        if torso_quat is not None:
+            anchor_quat = torch.from_numpy(quat_xyzw_to_wxyz(np.asarray(torso_quat, dtype=np.float32))).to(td)
         return SimState(
             joint_pos=torch.from_numpy(np.asarray(env_data.dof_pos, dtype=np.float32)).to(td),
             joint_vel=torch.from_numpy(np.asarray(env_data.dof_vel, dtype=np.float32)).to(td),
             root_quat=torch.from_numpy(root_quat_wxyz).to(td),
             root_ang_vel=torch.from_numpy(np.asarray(env_data.base_ang_vel, dtype=np.float32)).to(td),
             root_lin_vel=torch.from_numpy(np.asarray(lin, dtype=np.float32)).to(td) if lin is not None else None,
+            anchor_body_pos=anchor_pos,
+            anchor_body_quat=anchor_quat,
         )
 
     # ------------------------------------------------------------------
@@ -244,15 +208,29 @@ class AgilePolicy(Policy):
     # ------------------------------------------------------------------
 
     def get_observation(self, env_data, ctrl_data):
-        command = self._get_command(ctrl_data)
         sim_state = self._build_sim_state(env_data)
         td = torch.device(self.device)
+
+        payload = self._command_source.get(env_data, ctrl_data, sim_state)
+        self._last_payload = payload
+
+        cmd_tensor = (
+            torch.from_numpy(np.asarray(payload.vector, dtype=np.float32)).to(td)
+            if payload.vector is not None
+            else None
+        )
+        extras_tensors: dict[str, torch.Tensor] = {
+            k: torch.from_numpy(np.asarray(v, dtype=np.float32)).to(td) for k, v in payload.extras.items()
+        }
+
         obs = self._obs_builder.compute(
             sim_state,
-            command=torch.from_numpy(command).to(td),
+            command=cmd_tensor,
+            command_extras=extras_tensors,
             last_action=torch.from_numpy(self.last_action.astype(np.float32)).to(td),
         )
-        return obs.detach().cpu().numpy().astype(np.float32), {"commands": command}
+        extras_out = {"command": payload}
+        return obs.detach().cpu().numpy().astype(np.float32), extras_out
 
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         td = torch.device(self.device)
@@ -269,20 +247,20 @@ class AgilePolicy(Policy):
         if self._clip_min is not None and self._clip_max is not None:
             action = np.clip(action, self._clip_min, self._clip_max)
 
-        # Update obs builder with the raw (unscaled) last action for the next step.
         self._obs_builder.set_last_action(torch.from_numpy(action.astype(np.float32)).to(td))
 
         return action * self._action_scales
 
     def debug_viz(self, visualizer: MujocoVisualizer, env_data, ctrl_data, extras):
-        commands = extras.get("commands")
-        if commands is None or visualizer is None:
+        payload = extras.get("command")
+        if visualizer is None or payload is None or payload.vector is None:
             return
+        cmd = payload.vector
+        if cmd.shape[0] < 3:
+            return  # nothing meaningful to draw for non-velocity command shapes
         base_pos = env_data["base_pos"] if env_data["base_pos"] is not None else np.zeros(3)
         base_quat = env_data["base_quat"]
-        cmd_x = float(commands[0]) if len(commands) > 0 else 0.0
-        cmd_y = float(commands[1]) if len(commands) > 1 else 0.0
-        cmd_yaw = float(commands[2]) if len(commands) > 2 else 0.0
+        cmd_x, cmd_y, cmd_yaw = float(cmd[0]), float(cmd[1]), float(cmd[2])
         visualizer.draw_arrow(
             base_pos,
             base_quat,

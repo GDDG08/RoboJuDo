@@ -4,12 +4,27 @@ Each cfg points at one of the two policies populated by
 ``scripts/pull_agile_example_assets.py`` under
 ``RoboJuDo/assets/models/g1/agile/<label>/policy.{yaml,pt}``. The asset folder
 is git-ignored; assets are pulled on demand.
+
+Command semantics are picked per policy via the
+``AgileCommandSourceCfg``-derived ``command_source`` field — the policy class
+itself is command-shape-agnostic.
 """
 
+from pydantic import Field
+
 from robojudo.config import ASSETS_DIR
-from robojudo.policy.policy_cfgs import AgilePolicyCfg
+from robojudo.policy.policy_cfgs import (
+    AgilePolicyCfg,
+    AnyAgileCommandSourceCfg,
+    VelocityHeightCommandSourceCfg,
+)
 
 _AGILE_ASSETS = ASSETS_DIR / "models" / "g1" / "agile"
+_VEL_REMAP = [
+    [-1.0, 0.0, 1.0],
+    [1.0, 0.0, -1.0],
+    [1.0, 0.0, -1.0],
+]
 
 
 class G1AgileVelocityHeightPolicyCfg(AgilePolicyCfg):
@@ -20,11 +35,9 @@ class G1AgileVelocityHeightPolicyCfg(AgilePolicyCfg):
     checkpoint_path: str = (_AGILE_ASSETS / "velocity_height_g1" / "policy.pt").as_posix()
     # Layout = (num_layers, batch=1, hidden).
     rnn_hidden_shape: list[int] | None = [2, 1, 128]
-    command_remap: list[list[float]] = [
-        [-1.0, 0.0, 1.0],
-        [1.0, 0.0, -1.0],
-        [1.0, 0.0, -1.0],
-    ]
+    command_source: AnyAgileCommandSourceCfg | None = Field(
+        default_factory=lambda: VelocityHeightCommandSourceCfg(command_remap=_VEL_REMAP)
+    )
 
 
 class G1AgileVelocityHeightOnnxPolicyCfg(G1AgileVelocityHeightPolicyCfg):
@@ -47,8 +60,6 @@ class G1AgileVelocityHistoryPolicyCfg(AgilePolicyCfg):
     yaml_path: str = (_AGILE_ASSETS / "velocity_g1" / "policy.yaml").as_posix()
     checkpoint_path: str = (_AGILE_ASSETS / "velocity_g1" / "policy.pt").as_posix()
     rnn_hidden_shape: list[int] | None = None
-    command_remap: list[list[float]] = [
-        [-1.0, 0.0, 1.0],
-        [1.0, 0.0, -1.0],
-        [1.0, 0.0, -1.0],
-    ]
+    command_source: AnyAgileCommandSourceCfg | None = Field(
+        default_factory=lambda: VelocityHeightCommandSourceCfg(command_remap=_VEL_REMAP)
+    )

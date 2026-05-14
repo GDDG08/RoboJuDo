@@ -1,3 +1,5 @@
+from typing import Annotated, Literal
+
 from pydantic import Field, field_validator, model_validator
 
 from robojudo.config import ASSETS_DIR, Config
@@ -429,11 +431,68 @@ class TwistPolicyCfg(PolicyCfg):
         return [f for f in range(self.mimic_obs_total_degrees) if f not in self.mimic_obs_wrist_ids]
 
 
+class AgileCommandSourceCfg(Config):
+    """Base for all command-source configs consumed by :class:`AgilePolicy`.
+
+    Concrete subclasses pick a ``source_type`` matching a class registered in
+    ``robojudo.policy.utils.agile_commands.command_source_registry``.
+    """
+
+    source_type: str
+
+
+class VelocityHeightCommandSourceCfg(AgileCommandSourceCfg):
+    """Joystick / keyboard / unitree-pad → ``[vx, vy, wz]`` or ``[vx, vy, wz, height]``."""
+
+    source_type: Literal["VelocityHeightCommandSource"] = "VelocityHeightCommandSource"
+    command_remap: list[list[float]] = Field(default_factory=list)
+    defaults: dict[str, float] = Field(
+        default_factory=lambda: {
+            "linear_x": 0.0,
+            "linear_y": 0.0,
+            "angular_z": 0.0,
+            "height": 0.72,
+        }
+    )
+
+
+class MotionFileCommandSourceCfg(AgileCommandSourceCfg):
+    """Plays back an ``.npz`` motion clip and exposes a ``[joint_pos, joint_vel]``
+    ``generated_commands`` vector plus the ``motion_anchor_*_w`` extras needed by
+    tracking observation terms.
+    """
+
+    source_type: Literal["MotionFileCommandSource"] = "MotionFileCommandSource"
+    motion_path: str
+    anchor_body_name: str
+    motion_body_names: list[str] = Field(default_factory=list)
+    motion_joint_names: list[str] | None = None
+    loop: bool = True
+    play_speed: float = 1.0
+    yaw_only_align: bool = True
+    xy_only_align: bool = True
+
+
+class ZeroCommandSourceCfg(AgileCommandSourceCfg):
+    """All-zeros command of declared dim. Useful for CI / smoke runs."""
+
+    source_type: Literal["ZeroCommandSource"] = "ZeroCommandSource"
+    command_dim: int | None = None
+    """Length of the zero vector. ``None`` => inferred from the YAML's command obs term."""
+
+
+AnyAgileCommandSourceCfg = Annotated[
+    VelocityHeightCommandSourceCfg | MotionFileCommandSourceCfg | ZeroCommandSourceCfg,
+    Field(discriminator="source_type"),
+]
+
+
 class AgilePolicyCfg(PolicyCfg):
     """Generic AGILE-exported policy: an IO-descriptor YAML + checkpoint (.pt / .onnx).
 
     The YAML describes the observation terms, action term, and articulation defaults.
     The checkpoint is one of: TorchScript MLP, TorchScript RNN, ONNX, or raw RSL-RL.
+    The command interface is delegated to a polymorphic :class:`AgileCommandSourceCfg`.
     """
 
     policy_type: str = "AgilePolicy"
@@ -452,22 +511,10 @@ class AgilePolicyCfg(PolicyCfg):
     checkpoints the architecture (and RNN shape) is auto-detected from the state dict.
     """
 
-    command_remap: list[list[float]] = Field(default_factory=list)
-    """Per-axis joystick → command vector remap. Each row matches the form used by
-    :func:`robojudo.utils.util_func.command_remap`. Typically 3 rows for [vx, vy, wz]."""
-
-    command_defaults: dict[str, float] = Field(
-        default_factory=lambda: {
-            "linear_x": 0.0,
-            "linear_y": 0.0,
-            "angular_z": 0.0,
-            "height": 0.72,
-        }
-    )
-    """Fallback command vector entries when no controller provides input.
-
-    Keys used: ``linear_x``, ``linear_y``, ``angular_z``, ``height``.
-    """
+    command_source: AnyAgileCommandSourceCfg | None = Field(default_factory=ZeroCommandSourceCfg)
+    """The command interface used at runtime. Pick the subclass that matches your policy
+    (velocity-height vs motion-tracking vs zero); the policy class itself never touches
+    velocity/height/motion semantics."""
 
     action_beta: float = 1.0
     """Action smoothing factor. ``1.0`` disables smoothing (AGILE default)."""

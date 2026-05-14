@@ -61,6 +61,37 @@ def quat_rotate_inverse_wxyz(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     return a - b + c
 
 
+def quat_inv_wxyz(q: torch.Tensor) -> torch.Tensor:
+    """Conjugate of a unit quaternion ``[w, x, y, z]``."""
+    return torch.stack([q[0], -q[1], -q[2], -q[3]])
+
+
+def quat_mul_wxyz(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Quaternion product (both inputs/outputs ``[w, x, y, z]``)."""
+    w1, x1, y1, z1 = q1[0], q1[1], q1[2], q1[3]
+    w2, x2, y2, z2 = q2[0], q2[1], q2[2], q2[3]
+    return torch.stack(
+        [
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+        ]
+    )
+
+
+def matrix_from_quat_wxyz(q: torch.Tensor) -> torch.Tensor:
+    """3x3 rotation matrix from quaternion ``[w, x, y, z]``."""
+    w, x, y, z = q[0], q[1], q[2], q[3]
+    return torch.stack(
+        [
+            torch.stack([1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - w * z), 2.0 * (x * z + w * y)]),
+            torch.stack([2.0 * (x * y + w * z), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - w * x)]),
+            torch.stack([2.0 * (x * z - w * y), 2.0 * (y * z + w * x), 1.0 - 2.0 * (x * x + y * y)]),
+        ]
+    )
+
+
 # ---------------------------------------------------------------------------
 # SimState — minimal struct passed into the obs builder
 # ---------------------------------------------------------------------------
@@ -75,6 +106,11 @@ class SimState:
     root_quat: torch.Tensor  # (4,) [w, x, y, z]
     root_ang_vel: torch.Tensor  # (3,)
     root_lin_vel: torch.Tensor | None = None  # (3,) — root frame
+    # Anchor-body pose (world frame) needed for tracking obs terms (motion_anchor_*_b).
+    # Both quaternions are ``[w, x, y, z]``. Optional — only required when the YAML
+    # contains a tracking term.
+    anchor_body_pos: torch.Tensor | None = None  # (3,)
+    anchor_body_quat: torch.Tensor | None = None  # (4,) [w, x, y, z]
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +173,16 @@ _SUPPORTED_TERMS = (
     "joint_vel_rel",
     "last_action",
     "zero_padding",
+    "motion_anchor_pos_b",
+    "motion_anchor_ori_b",
+)
+
+# Names of obs terms whose shape determines the policy's command vector length.
+_COMMAND_TERM_NAMES = (
+    "generated_commands",
+    "velocity_and_height_command",
+    "locomotion_command",
+    "navigation_command",
 )
 
 
@@ -241,6 +287,7 @@ class AgileYamlObservationBuilder:
         # Cached state used by the per-term compute_fns.
         self._last_action: torch.Tensor | None = None
         self._command: torch.Tensor | None = None
+        self._command_extras: dict[str, torch.Tensor] = {}
 
         self.terms: list[YamlObservationTerm] = []
         for term_cfg in obs_policy:
@@ -260,6 +307,14 @@ class AgileYamlObservationBuilder:
 
         self.total_obs_dim = sum(t.output_dim() for t in self.terms)
 
+        # Surface the policy's command-vector length (or None) so AgilePolicy can
+        # hand it to the command source at construction time.
+        self.command_dim: int | None = None
+        for term in self.terms:
+            if term.name in _COMMAND_TERM_NAMES:
+                self.command_dim = int(term.obs_dim)
+                break
+
     # --- public API -------------------------------------------------------
 
     def set_last_action(self, action: torch.Tensor):
@@ -268,14 +323,23 @@ class AgileYamlObservationBuilder:
     def set_command(self, command: torch.Tensor):
         self._command = command.detach().to(self.device).float().flatten()
 
+    def set_command_extras(self, extras: dict[str, torch.Tensor] | None):
+        if not extras:
+            self._command_extras = {}
+            return
+        self._command_extras = {k: v.detach().to(self.device).float() for k, v in extras.items()}
+
     def compute(
         self,
         sim_state: SimState,
         command: torch.Tensor | None = None,
+        command_extras: dict[str, torch.Tensor] | None = None,
         last_action: torch.Tensor | None = None,
     ) -> torch.Tensor:
         if command is not None:
             self.set_command(command)
+        if command_extras is not None:
+            self.set_command_extras(command_extras)
         if last_action is not None:
             self.set_last_action(last_action)
 
@@ -287,6 +351,7 @@ class AgileYamlObservationBuilder:
             term.reset()
         self._last_action = None
         self._command = None
+        self._command_extras = {}
 
 
 # --- per-term raw compute functions --------------------------------------
@@ -353,6 +418,38 @@ def _raw_zero_padding(builder, term, sim_state: SimState) -> torch.Tensor:
     return torch.zeros(term.obs_dim, device=builder.device, dtype=torch.float32)
 
 
+def _raw_motion_anchor_pos_b(builder, term, sim_state: SimState) -> torch.Tensor:
+    """Position of the motion anchor expressed in the robot's anchor body frame.
+
+    Mirrors AGILE's ``motion_anchor_pos_b``::
+
+        pos_b = quat_apply(quat_inv(robot_quat), motion_pos_w - robot_pos_w)
+              = quat_rotate_inverse(robot_quat, motion_pos_w - robot_pos_w)
+    """
+    motion_pos = builder._command_extras.get("motion_anchor_pos_w")
+    robot_pos = sim_state.anchor_body_pos
+    robot_quat = sim_state.anchor_body_quat
+    if motion_pos is None or robot_pos is None or robot_quat is None:
+        return torch.zeros(term.obs_dim, device=builder.device, dtype=torch.float32)
+    delta = motion_pos.float() - robot_pos.float()
+    return quat_rotate_inverse_wxyz(robot_quat.float(), delta)
+
+
+def _raw_motion_anchor_ori_b(builder, term, sim_state: SimState) -> torch.Tensor:
+    """First two columns of the relative rotation matrix between the robot anchor
+    and the motion anchor (6-dim "ori6d" representation).
+
+    Mirrors AGILE's ``motion_anchor_ori_b``.
+    """
+    motion_quat = builder._command_extras.get("motion_anchor_quat_w")
+    robot_quat = sim_state.anchor_body_quat
+    if motion_quat is None or robot_quat is None:
+        return torch.zeros(term.obs_dim, device=builder.device, dtype=torch.float32)
+    q_rel = quat_mul_wxyz(quat_inv_wxyz(robot_quat.float()), motion_quat.float())
+    mat = matrix_from_quat_wxyz(q_rel)
+    return mat[:, :2].reshape(-1)
+
+
 _COMPUTE_FNS: dict[str, Callable[..., torch.Tensor]] = {
     "generated_commands": _raw_generated_commands,
     "velocity_and_height_command": _raw_generated_commands,
@@ -367,6 +464,8 @@ _COMPUTE_FNS: dict[str, Callable[..., torch.Tensor]] = {
     "joint_vel_rel": _raw_joint_vel_rel,
     "last_action": _raw_last_action,
     "zero_padding": _raw_zero_padding,
+    "motion_anchor_pos_b": _raw_motion_anchor_pos_b,
+    "motion_anchor_ori_b": _raw_motion_anchor_ori_b,
 }
 
 
