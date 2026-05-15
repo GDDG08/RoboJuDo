@@ -81,6 +81,25 @@ class g1_real(g1):
 
 
 @cfg_registry.register
+class g1_amo(RlPipelineCfg):
+    """
+    Unitree G1 robot, AMO Policy, Sim2Sim.
+    AMOPolicy is controlled by Xbox controller; with no controller it holds
+    the default standing pose (mid-range velocity + 0.75 m torso height).
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[JoystickCtrlCfg | KeyboardCtrlCfg] = [
+        JoystickCtrlCfg(),
+        # KeyboardCtrlCfg(),
+    ]
+
+    policy: G1AmoPolicyCfg = G1AmoPolicyCfg()
+
+
+@cfg_registry.register
 class g1_switch(RlMultiPolicyPipelineCfg):
     """
     Example of multi-policy pipeline configuration.

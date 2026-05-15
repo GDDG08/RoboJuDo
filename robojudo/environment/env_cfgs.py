@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import model_validator
 
 from robojudo.config import Config
+from robojudo.environment.sim_stability import SimStabilityCfg
 from robojudo.tools.tool_cfgs import DoFConfig, ForwardKinematicCfg, ZedOdometryCfg
 
 
@@ -38,6 +39,13 @@ class MujocoEnvCfg(EnvCfg):
 
     random_heading: bool = False
     """Randomize the robot's yaw heading on each spawn/reborn (useful for testing heading alignment)."""
+
+    # ====== SIM TEST HOOKS (do not set in production configs) ======
+    headless: bool = False
+    """If True, skip MujocoViewer creation. Set by the sim-test harness only."""
+
+    sim_stability: SimStabilityCfg | None = None
+    """Optional permissive fall detector for sim tests. Production configs leave this None."""
 
 
 class RobotEnvCfg(EnvCfg):

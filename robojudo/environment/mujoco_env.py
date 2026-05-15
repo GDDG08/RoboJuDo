@@ -7,6 +7,7 @@ import numpy as np
 
 from robojudo.environment import Environment, env_registry
 from robojudo.environment.env_cfgs import MujocoEnvCfg
+from robojudo.environment.sim_stability import SimStabilityMonitor
 from robojudo.environment.utils.mujoco_viz import MujocoVisualizer
 from robojudo.utils.util_func import quat_rotate_inverse_np, quatToEuler
 
@@ -31,23 +32,40 @@ class MujocoEnv(Environment):
         # mujoco.mj_resetDataKeyframe(self.model, self.data, 0)
         mujoco.mj_step(self.model, self.data)  # pyright: ignore[reportAttributeAccessIssue]
 
-        self.viewer = mujoco_viewer.MujocoViewer(
-            self.model,
-            self.data,
-            width=1200,
-            height=900,
-            hide_menus=True,
-            diable_key_callbacks=True,
-        )
-        self.viewer.cam.distance = 3.0
-        self.viewer.cam.elevation = -10.0
-        self.viewer.cam.azimuth = 180.0
-        # self.viewer._paused = True
-
-        if cfg_env.visualize_extras:
-            self.visualizer = MujocoVisualizer(self.viewer)
-        else:
+        self.headless = cfg_env.headless
+        if self.headless:
+            # Test-only path: skip viewer + visual extras entirely so sim runs
+            # without a display server.
+            self.viewer = None
             self.visualizer = None
+        else:
+            self.viewer = mujoco_viewer.MujocoViewer(
+                self.model,
+                self.data,
+                width=1200,
+                height=900,
+                hide_menus=True,
+                diable_key_callbacks=True,
+            )
+            self.viewer.cam.distance = 3.0
+            self.viewer.cam.elevation = -10.0
+            self.viewer.cam.azimuth = 180.0
+            # self.viewer._paused = True
+
+            if cfg_env.visualize_extras:
+                self.visualizer = MujocoVisualizer(self.viewer)
+            else:
+                self.visualizer = None
+
+        # Sim-test stability monitor (opt-in via cfg). Disabled in production.
+        self.stability_monitor: SimStabilityMonitor | None = None
+        if cfg_env.sim_stability is not None:
+            self.stability_monitor = SimStabilityMonitor(
+                model=self.model,
+                data=self.data,
+                cfg=cfg_env.sim_stability,
+                control_dt=self.control_dt,
+            )
 
         self.last_time = time.time()
         self.random_heading = cfg_env.random_heading
@@ -142,9 +160,10 @@ class MujocoEnv(Environment):
         if hand_pose is not None:
             logger.info("Hand pose-->", hand_pose)
 
-        self.viewer.cam.lookat = self.data.qpos.astype(np.float32)[:3]
-        if self.viewer.is_alive:
-            self.viewer.render()
+        if self.viewer is not None:
+            self.viewer.cam.lookat = self.data.qpos.astype(np.float32)[:3]
+            if self.viewer.is_alive:
+                self.viewer.render()
 
         for _ in range(self.sim_decimation):
             torque = (pd_target - self.dof_pos) * self.stiffness - self.dof_vel * self.damping
@@ -156,8 +175,12 @@ class MujocoEnv(Environment):
             self.update(simple=True)
         self.update(simple=False)
 
+        if self.stability_monitor is not None:
+            self.stability_monitor.update()
+
     def shutdown(self):
-        self.viewer.close()
+        if self.viewer is not None:
+            self.viewer.close()
 
 
 if __name__ == "__main__":
