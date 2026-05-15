@@ -69,7 +69,7 @@ class g1_real(g1):
         # env_type="UnitreeEnv",  # For unitree_sdk2py
         env_type="UnitreeCppEnv",  # For unitree_cpp, check README for more details
         unitree=G1UnitreeCfg(
-            net_if="eth0",
+            net_if="eth0",  # note: change to your network interface
         ),
     )
 
@@ -344,13 +344,18 @@ class g1_protomotions_tracker(RlPipelineCfg):
     """ProtoMotions tracker with cached 50fps motion.
 
     Uses the standard RoboJuDo G1 MuJoCo environment with ``born_place_align``
-    disabled (our policy handles heading alignment itself).
+    disabled (our policy handles heading alignment itself). ``random_heading``
+    is on so we exercise the policy's heading-alignment recompute on each spawn.
+
+    Use ``scripts/run_tracker_pipeline.py`` — it parses ``--onnx-path`` /
+    ``--motion-path`` / ``--motion-index``, which the generic ``run_pipeline.py``
+    does not.
 
     Usage::
 
-        cd robojudo && python scripts/run_pipeline.py -c g1_protomotions_tracker \\
-            --onnx-path /path/to/unified_pipeline.onnx \\
-            --motion-path /path/to/motion.motion
+        python scripts/run_tracker_pipeline.py -c g1_protomotions_tracker \\
+            --motion-path assets/motions/g1/g1_bones_seed_mini.pt \\
+            --motion-index 0
     """
 
     robot: str = "g1"
@@ -377,17 +382,21 @@ class g1_protomotions_tracker(RlPipelineCfg):
 class g1_protomotions_tracker_real(g1_protomotions_tracker):
     """ProtoMotions tracker on real G1 hardware.
 
+    Use ``scripts/run_tracker_pipeline.py`` — it parses ``--onnx-path`` /
+    ``--motion-path`` / ``--motion-index``, which the generic ``run_pipeline.py``
+    does not.
+
     Usage::
 
-        cd robojudo && python scripts/run_pipeline.py -c g1_protomotions_tracker_real \\
-            --onnx-path /path/to/unified_pipeline.onnx \\
-            --motion-path /path/to/motion.motion
+        python scripts/run_tracker_pipeline.py -c g1_protomotions_tracker_real \\
+            --motion-path assets/motions/g1/g1_bones_seed_mini.pt \\
+            --motion-index 0
     """
 
     env: G1RealEnvCfg = G1RealEnvCfg(
         env_type="UnitreeCppEnv",
         unitree=G1UnitreeCfg(
-            net_if="eth0",
+            net_if="eth0",  # note: change to your network interface
         ),
         born_place_align=False,
     )
