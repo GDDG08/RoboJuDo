@@ -74,6 +74,9 @@ Our framework highlights:
 - [x] [2025.11] Add support for **KungfuBot2** , check [KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy)!
 - [x] [2025.11] Add support for **TWIST** , check [TwistPolicy](./docs/policy.md/#policy--twistpolicy)!
 - [x] [2026.03] Add support for **ProtoMotions** ✨, check [ProtoMotions Tracker](#protomotions-tracker) and [ProtoMotionsTrackerPolicy](./docs/policy.md/#policy--protomotionstrackerpolicy)!
+- [x] [2026.04] Add support for **UnitreeMJLab Velocity** ✨
+- [x] [2026.04] Add support for **BFMZero** (tracking/reward/goal) ✨
+- [x] [2026.04] Add support for **GentleHumanoid** ✨
 - [ ] Release code for **HugWBC**
 - [ ] Release code for **GMT**
 - [ ] Upcoming policies...
@@ -130,6 +133,9 @@ Currently, **RoboJuDo** supports the following policy–environment combinations
 | KungfuBot<br>**KungfuBot2** | 🖥️ 🤖 | - | - | [PBHC](https://github.com/TeleHuman/PBHC) | [AsapPolicy](./docs/policy.md/#policy--asappolicy)<br>[KungfuBotGeneralPolicy](./docs/policy.md/#policy--kungfubotgeneralpolicy) | Need PHC submodule |
 | **TWIST** | 🖥️ 🤖 | - | - | [TWIST](https://github.com/YanjieZe/TWIST) | [TwistPolicy](./docs/policy.md/#policy--twistpolicy) |  |
 | **ProtoMotions** | 🖥️ 🤖 | - | - | [ProtoMotions](https://github.com/NVlabs/ProtoMotions) | [ProtoMotionsTrackerPolicy](./docs/policy.md/#policy--protomotionstrackerpolicy) | [nvlab doc](https://nvlabs.github.io/ProtoMotions/tutorials/workflows/g1_deployment.html) |
+| **UnitreeMJLab Velocity** | 🖥️ | - | - | [unitree_rl_mjlab](https://github.com/unitreerobotics/unitree_rl_mjlab) | [UnitreeMjlabVelocityPolicy](./docs/policy.md/#policy--unitreemjlabvelocitypolicy) | Direct ONNX velocity control (29DoF / 23DoF, 🤖23dof) |
+| **BFMZero** | 🖥️ | - | - | [BFM-Zero](https://github.com/LeCAR-Lab/BFM-Zero) | [BFMZeroPolicy](./docs/policy.md/#policy--bfmzeropolicy) | Multi-mode (tracking/reward/goal), 29DoF / 23DoF variants |
+| **GentleHumanoid** | 🖥️ | - | - | [gentle-humanoid](https://github.com/Axellwppr/gentle-humanoid) | [GentlePolicy](./docs/policy.md/#policy--gentlepolicy) | Motion tracking + compliance |
 | ... | ... | ... | ... | ... | ... | ... |
 </div>
 

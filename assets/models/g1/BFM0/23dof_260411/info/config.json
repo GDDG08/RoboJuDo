@@ -1,0 +1,273 @@
+{
+    "name": "TrainConfig",
+    "agent": {
+        "name": "FBcprAuxAgent",
+        "model": {
+            "name": "FBcprAuxModel",
+            "device": "cuda",
+            "archi": {
+                "name": "FBcprAuxModelArchiConfig",
+                "z_dim": 256,
+                "norm_z": true,
+                "f": {
+                    "name": "ForwardArchi",
+                    "hidden_dim": 2048,
+                    "model": "residual",
+                    "hidden_layers": 4,
+                    "embedding_layers": 2,
+                    "num_parallel": 2,
+                    "ensemble_mode": "batch",
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "privileged_state",
+                            "last_action",
+                            "history_actor"
+                        ]
+                    }
+                },
+                "b": {
+                    "name": "BackwardArchi",
+                    "hidden_dim": 256,
+                    "hidden_layers": 1,
+                    "norm": true,
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "privileged_state"
+                        ]
+                    }
+                },
+                "actor": {
+                    "name": "actor",
+                    "model": "residual",
+                    "hidden_dim": 2048,
+                    "hidden_layers": 4,
+                    "embedding_layers": 2,
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "last_action",
+                            "history_actor"
+                        ]
+                    }
+                },
+                "critic": {
+                    "name": "ForwardArchi",
+                    "hidden_dim": 2048,
+                    "model": "residual",
+                    "hidden_layers": 4,
+                    "embedding_layers": 2,
+                    "num_parallel": 2,
+                    "ensemble_mode": "batch",
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "privileged_state",
+                            "last_action",
+                            "history_actor"
+                        ]
+                    }
+                },
+                "discriminator": {
+                    "name": "DiscriminatorArchi",
+                    "hidden_dim": 1024,
+                    "hidden_layers": 2,
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "privileged_state"
+                        ]
+                    }
+                },
+                "aux_critic": {
+                    "name": "ForwardArchi",
+                    "hidden_dim": 2048,
+                    "model": "residual",
+                    "hidden_layers": 4,
+                    "embedding_layers": 2,
+                    "num_parallel": 2,
+                    "ensemble_mode": "batch",
+                    "input_filter": {
+                        "name": "DictInputFilterConfig",
+                        "key": [
+                            "state",
+                            "privileged_state",
+                            "last_action",
+                            "history_actor"
+                        ]
+                    }
+                }
+            },
+            "obs_normalizer": {
+                "name": "ObsNormalizerConfig",
+                "normalizers": {
+                    "state": {
+                        "name": "BatchNormNormalizerConfig",
+                        "momentum": 0.01
+                    },
+                    "privileged_state": {
+                        "name": "BatchNormNormalizerConfig",
+                        "momentum": 0.01
+                    },
+                    "last_action": {
+                        "name": "BatchNormNormalizerConfig",
+                        "momentum": 0.01
+                    },
+                    "history_actor": {
+                        "name": "BatchNormNormalizerConfig",
+                        "momentum": 0.01
+                    }
+                },
+                "allow_mismatching_keys": true
+            },
+            "inference_batch_size": 256000,
+            "seq_length": 8,
+            "actor_std": 0.05,
+            "amp": false,
+            "norm_aux_reward": {
+                "name": "RewardNormalizer",
+                "translate": false,
+                "scale": true
+            }
+        },
+        "train": {
+            "name": "FBcprAuxAgentTrainConfig",
+            "lr_f": 0.0003,
+            "lr_b": 0.00001,
+            "lr_actor": 0.0003,
+            "weight_decay": 0.0,
+            "clip_grad_norm": 0.0,
+            "fb_target_tau": 0.01,
+            "ortho_coef": 100.0,
+            "train_goal_ratio": 0.2,
+            "fb_pessimism_penalty": 0.0,
+            "actor_pessimism_penalty": 0.5,
+            "stddev_clip": 0.3,
+            "q_loss_coef": 0.0,
+            "batch_size": 512,
+            "discount": 0.98,
+            "use_mix_rollout": true,
+            "update_z_every_step": 100,
+            "z_buffer_size": 8192,
+            "rollout_expert_trajectories": true,
+            "rollout_expert_trajectories_length": 250,
+            "rollout_expert_trajectories_percentage": 0.5,
+            "lr_discriminator": 0.00001,
+            "lr_critic": 0.0003,
+            "critic_target_tau": 0.005,
+            "critic_pessimism_penalty": 0.5,
+            "reg_coeff": 0.05,
+            "scale_reg": true,
+            "expert_asm_ratio": 0.6,
+            "relabel_ratio": 0.8,
+            "grad_penalty_discriminator": 10.0,
+            "weight_decay_discriminator": 0.0,
+            "lr_aux_critic": 0.0003,
+            "reg_coeff_aux": 0.02,
+            "aux_critic_pessimism_penalty": 0.5
+        },
+        "aux_rewards": [
+            "penalty_torques",
+            "penalty_action_rate",
+            "limits_dof_pos",
+            "limits_torque",
+            "penalty_undesired_contact",
+            "penalty_feet_ori",
+            "penalty_ankle_roll",
+            "penalty_slippage"
+        ],
+        "aux_rewards_scaling": {
+            "penalty_action_rate": -0.1,
+            "penalty_feet_ori": -0.4,
+            "penalty_ankle_roll": -4.0,
+            "limits_dof_pos": -10.0,
+            "penalty_slippage": -2.0,
+            "penalty_undesired_contact": -1.0,
+            "penalty_torques": 0.0,
+            "limits_torque": 0.0
+        },
+        "cudagraphs": false,
+        "compile": false
+    },
+    "motions": "",
+    "motions_root": "",
+    "env": {
+        "name": "humanoidverse_isaac",
+        "device": "cuda:0",
+        "lafan_tail_path": "humanoidverse/data/lafan_23dof_10s-clipped.pkl",
+        "enable_cameras": false,
+        "camera_render_save_dir": "isaac_videos",
+        "max_episode_length_s": null,
+        "disable_obs_noise": false,
+        "disable_domain_randomization": false,
+        "relative_config_path": "exp/bfm_zero/bfm_zero",
+        "include_last_action": true,
+        "hydra_overrides": [
+            "robot=g1/g1_23dof_hard_waist",
+            "robot.control.action_scale=0.25",
+            "robot.control.action_clip_value=5.0",
+            "robot.control.normalize_action_to=5.0",
+            "env.config.headless=True",
+            "env.config.lie_down_init=True",
+            "env.config.lie_down_init_prob=0.3"
+        ],
+        "context_length": null,
+        "include_dr_info": false,
+        "included_dr_obs_names": null,
+        "include_history_actor": true,
+        "include_history_noaction": false,
+        "make_config_g1env_compatible": false,
+        "root_height_obs": true
+    },
+    "work_dir": "results/23dof-bfmzero-isaac-low/20260411_002545",
+    "seed": 4728,
+    "online_parallel_envs": 1024,
+    "log_every_updates": 384000,
+    "num_env_steps": 384000000,
+    "update_agent_every": 1024,
+    "num_seed_steps": 10240,
+    "num_agent_updates": 16,
+    "checkpoint_every_steps": 19200000,
+    "checkpoint_buffer": true,
+    "save_all_checkpoints": true,
+    "prioritization": true,
+    "prioritization_min_val": 0.5,
+    "prioritization_max_val": 2.0,
+    "prioritization_scale": 2.0,
+    "prioritization_mode": "exp",
+    "padding_beginning": 0,
+    "padding_end": 0,
+    "use_trajectory_buffer": true,
+    "buffer_size": 2560000,
+    "use_wandb": false,
+    "wandb_ename": "yitangl",
+    "wandb_gname": "bfmzero-isaac",
+    "wandb_pname": "23dof-bfmzero-isaac",
+    "use_tensorboard": true,
+    "tensorboard_log_dir": "tensorboard_logs",
+    "load_isaac_expert_data": true,
+    "buffer_device": "cuda",
+    "disable_tqdm": true,
+    "evaluations": [
+        {
+            "name": "HumanoidVerseIsaacTrackingEvaluationConfig",
+            "generate_videos": false,
+            "videos_dir": "videos",
+            "video_name_prefix": "unknown_agent",
+            "name_in_logs": "humanoidverse_tracking_eval",
+            "env": null,
+            "num_envs": 1024,
+            "n_episodes_per_motion": 1,
+            "include_results_from_all_envs": false,
+            "disable_tqdm": true
+        }
+    ],
+    "eval_every_steps": 9600000,
+    "tags": {}
+}

@@ -132,3 +132,5 @@ assets/motions
 logs
 MUJOCO_LOG.TXT
 assets/resources
+docs/pr-new-policies-guide.md
+AGENTS.MD.sisyphus/

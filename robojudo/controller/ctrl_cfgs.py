@@ -161,3 +161,36 @@ class TwistRedisCtrlCfg(CtrlCfg):
     redis_key: str = "action_mimic_g1"  # key to get command data from redis
 
     buffer_size: int = 5  # size of the data buffer to store recent commands
+
+
+class BFMKeyboardCtrlCfg(CtrlCfg):
+    ctrl_type: str = "BFMKeyboardCtrl"
+
+    combination_init_buttons: list[str] = ["Key.ctrl_l"]
+    """first button in combination, need to be held down to trigger other commands;"""
+
+    triggers: dict[str, str] = {
+        "Key.esc": "[SHUTDOWN]",
+        "`": "[SIM_REBORN]",
+        "|": "[MOTION_RESET]",
+        "-": "[BFM_MOTION_START]",
+        "n": "[BFM_NEXT]",
+        "(": "[BFM_RANDOM]",
+    }
+
+
+class BFMJoystickCtrlCfg(CtrlCfg):
+    ctrl_type: str = "JoystickCtrl"
+
+    combination_init_buttons: list[str] = ["LB", "RB"]
+    """first button in combination, need to be held down to trigger other commands;"""
+
+    triggers: dict[str, str] = {
+        "R1": "[BFM_POLICY_ACTIVATE]",
+        "R2": "[BFM_ACTIONS_ZERO]",
+        "A": "[BFM_INIT_STATE]",
+        "B": "[BFM_MOTION_START]",
+        "X": "[BFM_RESET_STOP_STATE]",
+        "Y": "[BFM_NEXT_REWARD_GOAL]",
+        "LB": "[SHUTDOWN]",
+    }

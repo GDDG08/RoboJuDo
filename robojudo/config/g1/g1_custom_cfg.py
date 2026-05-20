@@ -1,5 +1,7 @@
 from robojudo.config import cfg_registry
 from robojudo.controller.ctrl_cfgs import (
+    BFMJoystickCtrlCfg,  # noqa: F401
+    BFMKeyboardCtrlCfg,  # noqa: F401
     JoystickCtrlCfg,  # noqa: F401
     KeyboardCtrlCfg,  # noqa: F401
     UnitreeCtrlCfg,  # noqa: F401
@@ -24,11 +26,24 @@ from .env.g1_real_env_cfg import G1RealEnvCfg, G1UnitreeCfg  # noqa: F401
 from .policy.g1_amo_policy_cfg import G1AmoPolicyCfg  # noqa: F401
 from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg  # noqa: F401
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
+from .policy.g1_bfmzero_policy_cfg import (  # noqa: F401
+    G1BFMZeroGoal23DoFPolicyCfg,
+    G1BFMZeroGoalPolicyCfg,
+    G1BFMZeroReward23DoFPolicyCfg,
+    G1BFMZeroRewardPolicyCfg,
+    G1BFMZeroTracking23DoFPolicyCfg,
+    G1BFMZeroTrackingPolicyCfg,
+)
+from .policy.g1_gentle_policy_cfg import G1GentlePolicyCfg  # noqa: F401
 from .policy.g1_h2h_policy_cfg import G1H2HPolicyCfg  # noqa: F401
 from .policy.g1_kungfubot_policy_cfg import G1KungfuBotGeneralPolicyCfg, G1KungfuBotPolicyCfg  # noqa: F401
 from .policy.g1_smooth_policy_cfg import G1SmoothPolicyCfg  # noqa: F401
 from .policy.g1_twist_policy_cfg import G1TwistPolicyCfg  # noqa: F401
 from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg, G1UnitreeWoGaitPolicyCfg  # noqa: F401
+from .policy.g1_unitree_velocity_policy_cfg import (  # noqa: F401
+    G1UnitreeMjlabVelocity29DoFPolicyCfg,
+    G1UnitreeMjlabVelocityPolicyCfg,
+)
 
 # ======================== Custom Configs ======================== #
 """

@@ -1,0 +1,195 @@
+{
+    "name": "FBcprAuxAgent",
+    "model": {
+        "name": "FBcprAuxModel",
+        "device": "cuda",
+        "archi": {
+            "name": "FBcprAuxModelArchiConfig",
+            "z_dim": 128,
+            "norm_z": true,
+            "f": {
+                "name": "ForwardArchi",
+                "hidden_dim": 1024,
+                "model": "residual",
+                "hidden_layers": 4,
+                "embedding_layers": 2,
+                "num_parallel": 2,
+                "ensemble_mode": "batch",
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "privileged_state",
+                        "last_action",
+                        "history_actor"
+                    ]
+                }
+            },
+            "b": {
+                "name": "BackwardArchi",
+                "hidden_dim": 128,
+                "hidden_layers": 1,
+                "norm": true,
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "privileged_state"
+                    ]
+                }
+            },
+            "actor": {
+                "name": "actor",
+                "model": "residual",
+                "hidden_dim": 1024,
+                "hidden_layers": 4,
+                "embedding_layers": 2,
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "last_action",
+                        "history_actor"
+                    ]
+                }
+            },
+            "critic": {
+                "name": "ForwardArchi",
+                "hidden_dim": 1024,
+                "model": "residual",
+                "hidden_layers": 4,
+                "embedding_layers": 2,
+                "num_parallel": 2,
+                "ensemble_mode": "batch",
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "privileged_state",
+                        "last_action",
+                        "history_actor"
+                    ]
+                }
+            },
+            "discriminator": {
+                "name": "DiscriminatorArchi",
+                "hidden_dim": 512,
+                "hidden_layers": 2,
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "privileged_state"
+                    ]
+                }
+            },
+            "aux_critic": {
+                "name": "ForwardArchi",
+                "hidden_dim": 1024,
+                "model": "residual",
+                "hidden_layers": 4,
+                "embedding_layers": 2,
+                "num_parallel": 2,
+                "ensemble_mode": "batch",
+                "input_filter": {
+                    "name": "DictInputFilterConfig",
+                    "key": [
+                        "state",
+                        "privileged_state",
+                        "last_action",
+                        "history_actor"
+                    ]
+                }
+            }
+        },
+        "obs_normalizer": {
+            "name": "ObsNormalizerConfig",
+            "normalizers": {
+                "state": {
+                    "name": "BatchNormNormalizerConfig",
+                    "momentum": 0.01
+                },
+                "privileged_state": {
+                    "name": "BatchNormNormalizerConfig",
+                    "momentum": 0.01
+                },
+                "last_action": {
+                    "name": "BatchNormNormalizerConfig",
+                    "momentum": 0.01
+                },
+                "history_actor": {
+                    "name": "BatchNormNormalizerConfig",
+                    "momentum": 0.01
+                }
+            },
+            "allow_mismatching_keys": true
+        },
+        "inference_batch_size": 256000,
+        "seq_length": 8,
+        "actor_std": 0.05,
+        "amp": false,
+        "norm_aux_reward": {
+            "name": "RewardNormalizer",
+            "translate": false,
+            "scale": true
+        }
+    },
+    "train": {
+        "name": "FBcprAuxAgentTrainConfig",
+        "lr_f": 0.0003,
+        "lr_b": 1e-05,
+        "lr_actor": 0.0003,
+        "weight_decay": 0.0,
+        "clip_grad_norm": 0.0,
+        "fb_target_tau": 0.01,
+        "ortho_coef": 100.0,
+        "train_goal_ratio": 0.2,
+        "fb_pessimism_penalty": 0.0,
+        "actor_pessimism_penalty": 0.5,
+        "stddev_clip": 0.3,
+        "q_loss_coef": 0.0,
+        "batch_size": 512,
+        "discount": 0.98,
+        "use_mix_rollout": true,
+        "update_z_every_step": 100,
+        "z_buffer_size": 8192,
+        "rollout_expert_trajectories": true,
+        "rollout_expert_trajectories_length": 250,
+        "rollout_expert_trajectories_percentage": 0.5,
+        "lr_discriminator": 1e-05,
+        "lr_critic": 0.0003,
+        "critic_target_tau": 0.005,
+        "critic_pessimism_penalty": 0.5,
+        "reg_coeff": 0.05,
+        "scale_reg": true,
+        "expert_asm_ratio": 0.6,
+        "relabel_ratio": 0.8,
+        "grad_penalty_discriminator": 10.0,
+        "weight_decay_discriminator": 0.0,
+        "lr_aux_critic": 0.0003,
+        "reg_coeff_aux": 0.02,
+        "aux_critic_pessimism_penalty": 0.5
+    },
+    "aux_rewards": [
+        "penalty_torques",
+        "penalty_action_rate",
+        "limits_dof_pos",
+        "limits_torque",
+        "penalty_undesired_contact",
+        "penalty_feet_ori",
+        "penalty_ankle_roll",
+        "penalty_slippage"
+    ],
+    "aux_rewards_scaling": {
+        "penalty_action_rate": -0.1,
+        "penalty_feet_ori": -0.4,
+        "penalty_ankle_roll": -4.0,
+        "limits_dof_pos": -10.0,
+        "penalty_slippage": -2.0,
+        "penalty_undesired_contact": -1.0,
+        "penalty_torques": 0.0,
+        "limits_torque": 0.0
+    },
+    "cudagraphs": false,
+    "compile": false
+}
