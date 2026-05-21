@@ -14,6 +14,10 @@ class G1UnitreeCfg(UnitreeEnvCfg.UnitreeCfg):
 
     enable_odometry: bool = True
 
+    # G1 ships with a torso (secondary) IMU on rt/secondary_imu; prefer it over
+    # FK-derived torso pose for policies that need accurate torso_quat / torso_ang_vel.
+    enable_torso_imu: bool = True
+
 
 class G1RealEnvCfg(G1EnvCfg, UnitreeEnvCfg):
     # env_type: str = UnitreeEnvCfg.model_fields["env_type"].default

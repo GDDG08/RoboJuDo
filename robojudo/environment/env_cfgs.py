@@ -79,6 +79,10 @@ class UnitreeEnvCfg(RobotEnvCfg):
         enable_odometry: bool = False
         sport_state_topic: str = "rt/odommodestate"
 
+        enable_torso_imu: bool = False
+        """Subscribe to torso (secondary) IMU. G1 only."""
+        torso_imu_topic: str = "rt/secondary_imu"
+
         control_dt: float = 0.02
         """control command dt"""
 

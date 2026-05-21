@@ -19,7 +19,8 @@ Sensor requirements (real G1)
 - ``env_data.dof_pos`` / ``env_data.dof_vel`` -- joint encoders
 - ``env_data.base_quat`` (xyzw) -- pelvis IMU
 - ``env_data.base_ang_vel`` -- pelvis IMU gyro (body-local frame)
-- ``env_data.torso_quat`` (xyzw) -- FK-computed (requires ``update_with_fk=True``)
+- ``env_data.torso_quat`` (xyzw) -- prefer real torso IMU (``rt/secondary_imu``)
+  on G1; otherwise FK-computed (requires ``update_with_fk=True``)
 """
 
 import logging
@@ -299,13 +300,14 @@ class ProtoMotionsTrackerPolicy(Policy):
         """
         name = self._anchor_body_name
         if name is not None and name not in (None, "pelvis"):
-            # Named body -- look up in FK info
+            # Torso anchor: prefer the real torso IMU truth (G1 secondary IMU) over the
+            # FK estimate. torso_quat falls back to FK in sim / when no IMU is present.
+            if name == "torso_link" and env_data.torso_quat is not None:
+                return np.asarray(env_data.torso_quat, dtype=np.float32)
+            # Other named bodies -- look up in FK info
             fk = env_data.fk_info
             if fk is not None and name in fk:
                 return np.asarray(fk[name]["quat"], dtype=np.float32)
-            # Fallback: if the env exposes it as torso_quat and name matches
-            if name == "torso_link" and env_data.torso_quat is not None:
-                return np.asarray(env_data.torso_quat, dtype=np.float32)
         # Pelvis / root body -- always available as base_quat
         return np.asarray(env_data.base_quat, dtype=np.float32)
 

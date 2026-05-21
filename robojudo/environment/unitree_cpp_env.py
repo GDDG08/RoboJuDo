@@ -32,6 +32,10 @@ class UnitreeCppEnv(Environment):
         self.robot = cfg_unitree.robot
         self._dof_idx = cfg_env.joint2motor_idx
         self._odometry_type = cfg_env.odometry_type
+        self._enable_torso_imu = bool(cfg_unitree.enable_torso_imu)
+        self._torso_imu_received = False
+        if self._enable_torso_imu:
+            assert self.robot == "g1", "torso (secondary) IMU is only available on G1"
         if self._odometry_type == "ZED":
             assert self.cfg_env.zed_cfg is not None, "zed_cfg must be set if odometry_type is 'ZED'"
             from robojudo.tools.zed_odometry import ZedOdometry
@@ -119,6 +123,21 @@ class UnitreeCppEnv(Environment):
             self._base_ang_vel = ang_vel
             self._base_rpy = rpy
 
+            if self._enable_torso_imu:
+                raw_quat_wxyz = np.asarray(self.robot_state.torso_imu_state.quaternion, dtype=np.float32)
+                # C++ ImuState default-constructs to identity (w=1, xyz=0). Treat that as "no
+                # torso IMU sample yet" and fall back to FK below.
+                self._torso_imu_received = self._torso_imu_received or not (
+                    raw_quat_wxyz[0] == 1.0 and not raw_quat_wxyz[1:].any()
+                )
+                if self._torso_imu_received:
+                    torso_quat = raw_quat_wxyz[[1, 2, 3, 0]]
+                    torso_ang_vel = np.array(self.robot_state.torso_imu_state.gyroscope, dtype=np.float32)
+                    if self.born_place_align:
+                        torso_quat = self.base_align.align_quat(torso_quat)
+                    self._torso_quat = torso_quat
+                    self._torso_ang_vel = torso_ang_vel
+
         elif self.robot == "h1":
             raise NotImplementedError("H1 robot with unitree_cpp not supported yet.")
 
@@ -143,9 +162,13 @@ class UnitreeCppEnv(Environment):
         if self.update_with_fk:
             fk_info = self.fk()
             self._torso_pos = fk_info[self._torso_name]["pos"]
-            if self.robot != "h1":
+            # torso orientation/ang-vel come from the real torso IMU when available;
+            # otherwise fall back to the FK estimate. fk_info itself stays pure FK.
+            torso_imu_active = self._enable_torso_imu and self._torso_imu_received
+            if self.robot != "h1" and not torso_imu_active:
                 self._torso_quat = fk_info[self._torso_name]["quat"]
                 self._torso_ang_vel = fk_info[self._torso_name]["ang_vel"]
+            self._fk_info = fk_info
 
         # controller
         if self.RemoteControllerHandler:

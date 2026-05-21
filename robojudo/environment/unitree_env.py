@@ -18,6 +18,7 @@ from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowCmd_ as LowCmdGo  # type: 
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_ as LowStateGo  # type: ignore
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_ as SportModeState  # type: ignore
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import HandCmd_  # type: ignore
+from unitree_sdk2py.idl.unitree_hg.msg.dds_ import IMUState_ as IMUStateHG  # type: ignore
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowCmd_ as LowCmdHG  # type: ignore
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_ as LowStateHG  # type: ignore
 from unitree_sdk2py.utils.crc import CRC  # type: ignore
@@ -104,6 +105,16 @@ class UnitreeEnv(Environment):
             self.sport_state = unitree_go_msg_dds__SportModeState_()
             self.sport_state_subscriber = ChannelSubscriber(self.cfg_env.unitree.sport_state_topic, SportModeState)
             self.sport_state_subscriber.Init(self.SportStateHandler, 10)
+
+        # Torso (secondary) IMU setup, G1 only.
+        self._enable_torso_imu = bool(self.cfg_env.unitree.enable_torso_imu)
+        self.torso_imu_state: IMUStateHG | None = None
+        if self._enable_torso_imu:
+            assert self.robot == "g1", "torso (secondary) IMU is only available on G1"
+            self.torso_imu_subscriber = ChannelSubscriber(
+                self.cfg_env.unitree.torso_imu_topic, IMUStateHG
+            )
+            self.torso_imu_subscriber.Init(self.TorsoImuStateHandler, 10)
 
         # Hand setup
         self.hand_type = self.cfg_env.unitree.hand_type
@@ -197,6 +208,9 @@ class UnitreeEnv(Environment):
     def LowStateGoHandler(self, msg: LowStateGo):
         self.low_state = msg
 
+    def TorsoImuStateHandler(self, msg: IMUStateHG):
+        self.torso_imu_state = msg
+
     def update(self):
         # robot state
         dof_pos = []
@@ -226,6 +240,14 @@ class UnitreeEnv(Environment):
             self._base_quat = quat
             self._base_ang_vel = ang_vel
             self._base_rpy = rpy
+
+            if self._enable_torso_imu and self.torso_imu_state is not None:
+                torso_quat = np.array(self.torso_imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
+                torso_ang_vel = np.array(self.torso_imu_state.gyroscope, dtype=np.float32)
+                if self.born_place_align:
+                    torso_quat = self.base_align.align_quat(torso_quat)
+                self._torso_quat = torso_quat
+                self._torso_ang_vel = torso_ang_vel
 
         elif self.robot == "h1":
             # h1 imu is on the torso
@@ -273,9 +295,14 @@ class UnitreeEnv(Environment):
         if self.update_with_fk:
             fk_info = self.fk()
             self._torso_pos = fk_info[self._torso_name]["pos"]
-            if self.robot != "h1":
+            # torso orientation/ang-vel come from the real torso IMU when available;
+            # otherwise fall back to the FK estimate. fk_info itself stays pure FK.
+            # (h1: torso IMU set in the h1 branch; g1: secondary IMU set above)
+            torso_imu_active = self._enable_torso_imu and self.torso_imu_state is not None
+            if self.robot != "h1" and not torso_imu_active:
                 self._torso_quat = fk_info[self._torso_name]["quat"]
                 self._torso_ang_vel = fk_info[self._torso_name]["ang_vel"]
+            self._fk_info = fk_info
 
         # controller
         if self.RemoteControllerHandler:
