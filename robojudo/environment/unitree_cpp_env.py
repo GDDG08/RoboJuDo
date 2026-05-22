@@ -73,9 +73,13 @@ class UnitreeCppEnv(Environment):
 
         self.unitree = UnitreeController(cfg_unitree_dict)
 
-        # born place alignment extra for h1 torso
+        # Born-place alignment for the torso frame. The torso (secondary) IMU
+        # zeroes independently from the base IMU at power-on, so it needs its own
+        # reference instead of reusing base_align.
         if self.robot == "h1":
             self.torso_align = TransformAlignment()
+        elif self._enable_torso_imu:
+            self.torso_align = TransformAlignment(yaw_only=True)
 
         # time.sleep(1)  # wait for unitree init
         self.self_check()
@@ -104,6 +108,9 @@ class UnitreeCppEnv(Environment):
         super().set_born_place(quat_, pos_)
 
         if self.robot == "h1":
+            self.torso_align.set_base(quat=self.torso_quat)
+        elif self._enable_torso_imu and self._torso_imu_received:
+            # Zero the torso IMU against its own (raw) reading at born place.
             self.torso_align.set_base(quat=self.torso_quat)
 
         if self._odometry_type == "ZED":
@@ -148,7 +155,7 @@ class UnitreeCppEnv(Environment):
                     torso_quat = raw_quat_wxyz[[1, 2, 3, 0]]
                     torso_ang_vel = np.array(self.robot_state.torso_imu_state.gyroscope, dtype=np.float32)
                     if self.born_place_align:
-                        torso_quat = self.base_align.align_quat(torso_quat)
+                        torso_quat = self.torso_align.align_quat(torso_quat)
                     self._torso_quat = torso_quat
                     self._torso_ang_vel = torso_ang_vel
 

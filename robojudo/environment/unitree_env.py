@@ -149,9 +149,13 @@ class UnitreeEnv(Environment):
         self.lowcmd_send_thread = RecurrentThread(interval=self._control_dt, target=self.send_cmd, name="control")
         self.lowcmd_send_thread.Start()
 
-        # born place alignment extra for h1 torso
+        # Born-place alignment for the torso frame. The torso (secondary) IMU
+        # zeroes independently from the base IMU at power-on, so it needs its own
+        # reference instead of reusing base_align.
         if self.robot == "h1":
             self.torso_align = TransformAlignment()
+        elif self._enable_torso_imu:
+            self.torso_align = TransformAlignment(yaw_only=True)
 
         self.self_check()
 
@@ -194,6 +198,9 @@ class UnitreeEnv(Environment):
             torso_quat = self.torso_quat
             torso_quat = calc_heading_quat_np(torso_quat)  # keep yaw only
             self.torso_align.set_base(quat=torso_quat)
+        elif self._enable_torso_imu and self.torso_imu_state is not None:
+            # Zero the torso IMU against its own (raw) reading at born place.
+            self.torso_align.set_base(quat=self.torso_quat)
 
         if self._odometry_type == "ZED":
             self.zed_odometry.set_zreo()
@@ -245,7 +252,7 @@ class UnitreeEnv(Environment):
                 torso_quat = np.array(self.torso_imu_state.quaternion, dtype=np.float32)[[1, 2, 3, 0]]
                 torso_ang_vel = np.array(self.torso_imu_state.gyroscope, dtype=np.float32)
                 if self.born_place_align:
-                    torso_quat = self.base_align.align_quat(torso_quat)
+                    torso_quat = self.torso_align.align_quat(torso_quat)
                 self._torso_quat = torso_quat
                 self._torso_ang_vel = torso_ang_vel
 
