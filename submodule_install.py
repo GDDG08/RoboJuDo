@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -17,6 +18,23 @@ def run(cmd, cwd=None):
         print(f"Command failed with error: {e}")
 
 
+def pip_install_prefix():
+    """Return the editable-install command prefix for the active environment.
+
+    uv-managed venvs frequently ship without pip, so `python -m pip` would fail.
+    Fall back to `uv pip` when the pip module is unavailable but uv is on PATH.
+    """
+    if importlib.util.find_spec("pip") is not None:
+        return f"{sys.executable} -m pip install -e"
+    if shutil.which("uv") is not None:
+        print("pip not found in this environment; using `uv pip` instead.")
+        return "uv pip install -e"
+    raise RuntimeError(
+        "Neither pip nor uv is available to install submodules. "
+        "Install pip (`python -m ensurepip --upgrade`) or uv first."
+    )
+
+
 def load_config():
     with open(CONFIG_FILE) as f:
         return yaml.safe_load(f)
@@ -24,6 +42,7 @@ def load_config():
 
 def install_submodules(selected=None):
     config = load_config()
+    install_prefix = pip_install_prefix()
     for name, info in config.items():
         print(f"\n----- Installing submodule: {name} -----")
         install = info.get("install", False)
@@ -67,7 +86,7 @@ def install_submodules(selected=None):
         if (extra_packages := info.get("extra_packages", None)) is not None:
             packages += extra_packages
         for pkg in packages:
-            run(f"pip install -e {pkg}")
+            run(f"{install_prefix} {pkg}")
 
 
 if __name__ == "__main__":
