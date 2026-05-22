@@ -53,15 +53,14 @@ validation an agent can run on its own — never skip it.
 > _Drop new env-prep / setup gotchas here as you hit them. When this list
 > grows past a handful of entries, promote it to its own document._
 
-- **`python submodule_install.py` calls `pip install -e ...` directly.**
-  That resolves to whatever `pip` is on `$PATH`, which under a `uv venv`
-  is usually *not* this project's venv — the submodule lands in a sibling
-  install and `import phc` fails. TODO: teach `submodule_install.py` to
-  honor `VIRTUAL_ENV` / call `uv pip install` when available. Workaround
-  for now: run the install (so the git submodule + patches + addons land
-  on disk), then `uv pip install -e third_party/<name>` manually with
-  `--python /path/to/.venv/bin/python` to land the package in the right
-  venv.
+- **Unitree envs need a platform-specific SDK; their smoke-test import failure
+  off-platform is expected.** `UnitreeEnv` / `UnitreeCppEnv` require the Unitree
+  SDK (`unitree_sdk2py` / compiled `unitree_cpp` + CycloneDDS), which installs
+  only on the robot's platform (Linux / Jetson) — not macOS or CI. They are
+  always registered, so `tests.test_full_imports` reporting them as failed
+  off-platform is **expected, not a regression**. For hardware-free automated
+  runs (agent testing, macOS, CI), build `UnitreeCppEnv` against the bundled
+  dummy SDK. See `CONTRIBUTING.md § 4.1`.
 
 ## 4. Architecture in 30 seconds
 
@@ -213,7 +212,7 @@ needs to be longer than the median, that's fine.
 Before declaring work done:
 
 1. `ruff check robojudo/ tests/` — must be clean.
-2. `python -m unittest tests.test_full_imports` — must be green.
+2. `python -m unittest tests.test_full_imports` — must be green, except the SDK-gated Unitree env imports when off-platform (see §3).
 3. `python -m tests.sim.run_all` — every non-skipped spec must pass; if you
    added or changed a policy, add a corresponding `PolicySimSpec` (see
    `CONTRIBUTING.md § 4.2`).

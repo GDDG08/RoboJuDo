@@ -88,9 +88,25 @@ python -m unittest tests.test_full_imports
 ```
 
 This checks every registered config / controller / env / policy / pipeline
-imports cleanly. It tolerates optional-dependency failures (e.g. missing
-`phc` / `redis` / Unitree SDK) by design — those are gated through
-`submodule_cfg.yaml`.
+imports cleanly. Gated optional dependencies (e.g. `phc` / `redis`) are skipped
+through `submodule_cfg.yaml`, so their absence does not fail the suite.
+
+The Unitree backends are different. `UnitreeEnv` needs `unitree_sdk2py` and
+`UnitreeCppEnv` needs the compiled `unitree_cpp` (real `unitree_sdk2` +
+CycloneDDS); both install only on the robot's platform (Linux / Jetson), not on
+macOS or CI. They are always registered, so off-platform the smoke test *will*
+report their import as failed. **That failure is expected, not a regression.**
+
+For automated runs that never touch hardware (agent testing, macOS, CI), build
+`UnitreeCppEnv` against the bundled dummy SDK so it imports and the pipeline
+runs without a robot or DDS:
+
+```bash
+pip install ./packages/unitree_cpp --config-settings=cmake.define.USE_DUMMY_SDK=ON
+```
+
+The dummy is test-only — it feeds simulated data, warns loudly on import, and
+must never be used on a real robot.
 
 ### 4.2 Sim policy tests (pre-commit)
 
