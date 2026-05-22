@@ -1,3 +1,4 @@
+import importlib.metadata
 import logging
 import time
 
@@ -36,6 +37,19 @@ class UnitreeCppEnv(Environment):
         self._torso_imu_received = False
         if self._enable_torso_imu:
             assert self.robot == "g1", "torso (secondary) IMU is only available on G1"
+            # Hard requirement (the import-time helper is only a soft reminder):
+            # torso_imu_state binding exists from unitree_cpp 1.0.4 onward. A stale
+            # 1.0.3 build would silently lack it, so fail loudly instead.
+            if not hasattr(RobotState, "torso_imu_state"):
+                try:
+                    installed = importlib.metadata.version("unitree_cpp")
+                except importlib.metadata.PackageNotFoundError:
+                    installed = "unknown"
+                raise RuntimeError(
+                    f"enable_torso_imu=True requires unitree_cpp >= 1.0.4, but the "
+                    f"installed build ({installed}) lacks RobotState.torso_imu_state. "
+                    f"Rebuild it with `python submodule_install.py unitree_cpp`."
+                )
         if self._odometry_type == "ZED":
             assert self.cfg_env.zed_cfg is not None, "zed_cfg must be set if odometry_type is 'ZED'"
             from robojudo.tools.zed_odometry import ZedOdometry

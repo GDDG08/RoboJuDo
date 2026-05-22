@@ -23,6 +23,11 @@ from robojudo.utils.logger import setup_logger  # noqa: E402, I001
 
 logger = setup_logger()
 
+# Warn if a compiled submodule (e.g. unitree_cpp) is older than its checked-out source
+from robojudo.utils.submodule_check import check_submodule_versions  # noqa: E402, I001
+
+check_submodule_versions()
+
 # Print version info
 __version__ = "1.5.0"
 logger.debug(f"{'=' * 10} robojudo-{__version__} init done {'=' * 10}\n")
