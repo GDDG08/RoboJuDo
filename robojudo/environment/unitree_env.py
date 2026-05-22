@@ -36,7 +36,7 @@ from robojudo.environment.utils.unitree_command import (
 from robojudo.environment.utils.unitree_rotation import transform_imu_data
 from robojudo.tools.retarget import HandRetarget
 from robojudo.utils.rotation import TransformAlignment
-from robojudo.utils.util_func import calc_heading_quat_np, quat_rotate_inverse_np
+from robojudo.utils.util_func import quat_rotate_inverse_np
 
 logger = logging.getLogger(__name__)
 
@@ -149,12 +149,10 @@ class UnitreeEnv(Environment):
         self.lowcmd_send_thread = RecurrentThread(interval=self._control_dt, target=self.send_cmd, name="control")
         self.lowcmd_send_thread.Start()
 
-        # Born-place alignment for the torso frame. The torso (secondary) IMU
-        # zeroes independently from the base IMU at power-on, so it needs its own
-        # reference instead of reusing base_align.
-        if self.robot == "h1":
-            self.torso_align = TransformAlignment()
-        elif self._enable_torso_imu:
+        # Born-place alignment for the torso frame. The torso IMU (h1's only IMU,
+        # or g1's secondary IMU) zeroes independently from the base IMU at
+        # power-on, so it needs its own reference instead of reusing base_align.
+        if self.robot == "h1" or self._enable_torso_imu:
             self.torso_align = TransformAlignment(yaw_only=True)
 
         self.self_check()
@@ -194,12 +192,7 @@ class UnitreeEnv(Environment):
         super().set_born_place(quat_, pos_)
         logger.info(f"[UnitreeEnv] born place set to pos: {pos_}, quat: {quat_}")
 
-        if self.robot == "h1":
-            torso_quat = self.torso_quat
-            torso_quat = calc_heading_quat_np(torso_quat)  # keep yaw only
-            self.torso_align.set_base(quat=torso_quat)
-        elif self._enable_torso_imu and self.torso_imu_state is not None:
-            # Zero the torso IMU against its own (raw) reading at born place.
+        if self.robot == "h1" or (self._enable_torso_imu and self.torso_imu_state is not None):
             self.torso_align.set_base(quat=self.torso_quat)
 
         if self._odometry_type == "ZED":

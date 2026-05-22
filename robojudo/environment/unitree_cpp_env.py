@@ -31,6 +31,9 @@ class UnitreeCppEnv(Environment):
         cfg_unitree_dict["damping"] = self.damping
 
         self.robot = cfg_unitree.robot
+        # Asset validation: this backend is wired for the G1 only (H1 was never
+        # implemented here). Fail at construction instead of mid-update.
+        assert self.robot == "g1", f"UnitreeCppEnv only supports the G1 robot, got '{self.robot}'."
         self._dof_idx = cfg_env.joint2motor_idx
         self._odometry_type = cfg_env.odometry_type
         self._enable_torso_imu = bool(cfg_unitree.enable_torso_imu)
@@ -76,9 +79,7 @@ class UnitreeCppEnv(Environment):
         # Born-place alignment for the torso frame. The torso (secondary) IMU
         # zeroes independently from the base IMU at power-on, so it needs its own
         # reference instead of reusing base_align.
-        if self.robot == "h1":
-            self.torso_align = TransformAlignment()
-        elif self._enable_torso_imu:
+        if self._enable_torso_imu:
             self.torso_align = TransformAlignment(yaw_only=True)
 
         # time.sleep(1)  # wait for unitree init
@@ -107,10 +108,7 @@ class UnitreeCppEnv(Environment):
         pos_ = self.base_pos if pos is None else pos
         super().set_born_place(quat_, pos_)
 
-        if self.robot == "h1":
-            self.torso_align.set_base(quat=self.torso_quat)
-        elif self._enable_torso_imu and self._torso_imu_received:
-            # Zero the torso IMU against its own (raw) reading at born place.
+        if self._enable_torso_imu and self._torso_imu_received:
             self.torso_align.set_base(quat=self.torso_quat)
 
         if self._odometry_type == "ZED":
@@ -159,9 +157,6 @@ class UnitreeCppEnv(Environment):
                     self._torso_quat = torso_quat
                     self._torso_ang_vel = torso_ang_vel
 
-        elif self.robot == "h1":
-            raise NotImplementedError("H1 robot with unitree_cpp not supported yet.")
-
         # odometry
         if self._odometry_type == "ZED":
             self.zed_odometry.update()
@@ -186,7 +181,7 @@ class UnitreeCppEnv(Environment):
             # torso orientation/ang-vel come from the real torso IMU when available;
             # otherwise fall back to the FK estimate. fk_info itself stays pure FK.
             torso_imu_active = self._enable_torso_imu and self._torso_imu_received
-            if self.robot != "h1" and not torso_imu_active:
+            if not torso_imu_active:
                 self._torso_quat = fk_info[self._torso_name]["quat"]
                 self._torso_ang_vel = fk_info[self._torso_name]["ang_vel"]
             self._fk_info = fk_info
