@@ -39,6 +39,9 @@ def install_submodules(selected=None):
         # If submodule already initialized, clean it first
         if (path / ".git").exists():
             print(f"Cleaning existing submodule '{name}'...")
+           # If submodule already initialized, clean it first
+        if (path / ".git").exists():
+            print(f"Cleaning existing submodule {name}...")
             run(f"cd {path} && git reset --hard && git clean -fd")
         run(f"git submodule update --init {path}")
 
@@ -77,3 +80,4 @@ if __name__ == "__main__":
 
     # Usage example:
     # python submodule_install.py mujoco_viewer unitree_cpp
+修复submodule_install初始化报错:42-45
