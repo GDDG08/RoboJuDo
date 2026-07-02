@@ -134,21 +134,46 @@ class ProtoMotionsTrackerPolicy(Policy):
         self._heading_offset = None
         self.reset()
 
-    # G1 default standing pose (from protomotions.robot_configs.g1)
-    _G1_DEFAULT_JOINT_POS = {
-        ".*_hip_pitch_joint": -0.312,
-        ".*_knee_joint": 0.669,
-        ".*_ankle_pitch_joint": -0.363,
-        ".*_elbow_joint": 0.6,
-        "left_shoulder_roll_joint": 0.2,
-        "left_shoulder_pitch_joint": 0.2,
-        "right_shoulder_roll_joint": -0.2,
-        "right_shoulder_pitch_joint": 0.2,
+    # Default standing pose per robot (from protomotions.robot_configs.*).
+    # NOTE: h1_2 entry is an APPROXIMATION reusing g1's regex/values since
+    # h1_2's joint-name suffixes match g1's convention (hip_pitch/knee/
+    # ankle_pitch/elbow/shoulder_roll+pitch) and no explicit default standing
+    # joint-angle table was found in protomotions/robot_configs/h1_2.py at
+    # smoke-checkpoint time. Only used for the "hold default pose" UX mode
+    # (pre-motion-start); does not affect tracker rollout correctness once
+    # motion tracking starts. Revisit with real h1_2-tuned values if the
+    # default-pose hold looks bad.
+    _DEFAULT_JOINT_POS_BY_ROBOT = {
+        "g1": {
+            ".*_hip_pitch_joint": -0.312,
+            ".*_knee_joint": 0.669,
+            ".*_ankle_pitch_joint": -0.363,
+            ".*_elbow_joint": 0.6,
+            "left_shoulder_roll_joint": 0.2,
+            "left_shoulder_pitch_joint": 0.2,
+            "right_shoulder_roll_joint": -0.2,
+            "right_shoulder_pitch_joint": 0.2,
+        },
+        "h1_2": {
+            ".*_hip_pitch_joint": -0.312,
+            ".*_knee_joint": 0.669,
+            ".*_ankle_pitch_joint": -0.363,
+            ".*_elbow_joint": 0.6,
+            "left_shoulder_roll_joint": 0.2,
+            "left_shoulder_pitch_joint": 0.2,
+            "right_shoulder_roll_joint": -0.2,
+            "right_shoulder_pitch_joint": 0.2,
+        },
     }
+    # Backward-compat alias (in case anything external referenced this name).
+    _G1_DEFAULT_JOINT_POS = _DEFAULT_JOINT_POS_BY_ROBOT["g1"]
 
     def _resolve_default_dof_pos(self, joint_names: list[str]) -> np.ndarray:
         """Resolve default DOF positions via regex-pattern matching."""
-        DEFAULT_JOINT_POS = self._G1_DEFAULT_JOINT_POS
+        robot = getattr(self.cfg_policy, "robot", "g1")
+        DEFAULT_JOINT_POS = self._DEFAULT_JOINT_POS_BY_ROBOT.get(
+            robot, self._DEFAULT_JOINT_POS_BY_ROBOT["g1"]
+        )
 
         default_pos = np.zeros(len(joint_names), dtype=np.float32)
         for pattern, value in DEFAULT_JOINT_POS.items():

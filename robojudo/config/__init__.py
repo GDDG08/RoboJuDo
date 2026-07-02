@@ -26,4 +26,5 @@ def __getattr__(name: str) -> type[Config]:
 # ===== import to register configs =====
 import robojudo.config.g1  # noqa: E402, F401
 import robojudo.config.h1  # noqa: E402, F401
+import robojudo.config.h1_2  # noqa: E402, F401
 # print("Available configs:", cfg_registry.registered_modules.keys())
