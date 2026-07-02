@@ -39,6 +39,21 @@ class MujocoEnvCfg(EnvCfg):
     random_heading: bool = False
     """Randomize the robot's yaw heading on each spawn/reborn (useful for testing heading alignment)."""
 
+    use_implicit_pd: bool = False
+    """If True, reconfigure the MJCF's <motor> actuators into MuJoCo native
+    position (PD) actuators (gainprm/biasprm/forcerange set from
+    dof.stiffness/damping/torque_limits) and let MuJoCo compute PD force
+    internally each physics substep, instead of computing torque explicitly
+    in Python and writing it to raw torque actuators every substep.
+
+    Default False preserves original RoboJuDo behavior (explicit PD, as
+    documented -- this matches ProtoMotions' MujocoSimulator's
+    `use_implicit_pd=False` / "explicit PD" mode). ProtoMotions'
+    MujocoSimulatorConfig defaults `use_implicit_pd=True`, i.e. its own
+    default eval/training behavior uses *implicit* PD -- set this to True
+    for parity with a ProtoMotions checkpoint that was trained/evaluated
+    under that default (e.g. h1_2 BUILT_IN_PD checkpoints)."""
+
 
 class RobotEnvCfg(EnvCfg):
     env_type: str = "DummyEnv"
