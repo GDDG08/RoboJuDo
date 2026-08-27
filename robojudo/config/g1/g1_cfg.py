@@ -21,6 +21,10 @@ from .ctrl.g1_twist_redis_ctrl_cfg import G1TwistRedisCtrlCfg  # noqa: F401
 from .env.g1_dummy_env_cfg import G1DummyEnvCfg  # noqa: F401
 from .env.g1_mujuco_env_cfg import G1_12MujocoEnvCfg, G1_23MujocoEnvCfg, G1MujocoEnvCfg  # noqa: F401
 from .env.g1_real_env_cfg import G1RealEnvCfg, G1UnitreeCfg  # noqa: F401
+from .policy.g1_agile_policy_cfg import (  # noqa: F401
+    G1AgileVelocityHeightPolicyCfg,
+    G1AgileVelocityHistoryPolicyCfg,
+)
 from .policy.g1_amo_policy_cfg import G1AmoPolicyCfg  # noqa: F401
 from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg  # noqa: F401
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
@@ -403,6 +407,71 @@ class g1_protomotions_tracker_real(g1_protomotions_tracker):
     ctrl: list[UnitreeCtrlCfg] = [
         UnitreeCtrlCfg(),
     ]
+    do_safety_check: bool = True
+
+
+# ======================== AGILE Policies ======================== #
+
+
+@cfg_registry.register
+class g1_agile(RlPipelineCfg):
+    """AGILE velocity_height G1 policy in MuJoCo (sim2sim)."""
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+    ctrl: list[JoystickCtrlCfg | KeyboardCtrlCfg] = [JoystickCtrlCfg()]
+    policy: G1AgileVelocityHeightPolicyCfg = G1AgileVelocityHeightPolicyCfg()
+
+
+@cfg_registry.register
+class g1_agile_history(g1_agile):
+    """AGILE velocity_g1 policy (MLP + per-term history_length=5) in MuJoCo.
+
+    Velocity-only command (no height). Same controller setup as ``g1_agile``.
+    """
+
+    policy: G1AgileVelocityHistoryPolicyCfg = G1AgileVelocityHistoryPolicyCfg()
+
+
+@cfg_registry.register
+class g1_agile_history_keyboard(g1_agile):
+    """``g1_agile_history`` with keyboard control (``w/s`` fwd/back, ``a/d`` strafe, ``e/q`` yaw)."""
+
+    ctrl: list[KeyboardCtrlCfg | JoystickCtrlCfg] = [KeyboardCtrlCfg()]
+    policy: G1AgileVelocityHistoryPolicyCfg = G1AgileVelocityHistoryPolicyCfg()
+
+
+@cfg_registry.register
+class g1_agile_keyboard(g1_agile):
+    """Same AGILE policy as ``g1_agile``, keyboard-driven in MuJoCo.
+
+    Keys: ``w/s`` forward/back, ``a/d`` strafe, ``e/q`` yaw.
+    """
+
+    ctrl: list[KeyboardCtrlCfg | JoystickCtrlCfg] = [KeyboardCtrlCfg()]
+
+
+@cfg_registry.register
+class g1_agile_dummy(g1_agile):
+    """Same AGILE policy as ``g1_agile``, no-physics DummyEnv — CI / pre-hardware
+    plumbing check. Exercises the full RlPipeline + ctrl_manager + DoFAdapter
+    pipeline without MuJoCo or a robot. ``env.step`` just stores the pd_target.
+    """
+
+    env: G1DummyEnvCfg = G1DummyEnvCfg(forward_kinematic=None, update_with_fk=False)
+    ctrl: list = []
+    do_safety_check: bool = False
+
+
+@cfg_registry.register
+class g1_agile_real(g1_agile):
+    """Same AGILE policy as ``g1_agile``, real Unitree G1."""
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(net_if="eth0"),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [UnitreeCtrlCfg()]
     do_safety_check: bool = True
 
 
