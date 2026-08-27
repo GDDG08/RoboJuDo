@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white]" alt="pre-commit"/>
   <!-- License -->
   <a href="https://creativecommons.org/licenses/by-nc/4.0/">
-    <img src="https://img.shields.io/badge/License-CC--BY--NC--4.0-lightgrey.svg" alt="license"/>
+    <img src="https://img.shields.io/badge/License-CC--BY--4.0-lightgrey.svg" alt="license"/>
   </a>
 </p>
 <img src="docs/images/header-demo.gif" width="80%" alt="demo"/>
@@ -389,7 +389,7 @@ If you find our work useful, please cite our GitHub repository:
 }
 
 @misc{RoboJuDo,
-  author = {Zihan Zhuang, Yi Dong, Peng Li},
+  author = {Zihan Zhuang and Yi Dong and Peng Li},
   title = {A plug-and-play deploy framework for robots. Just deploy, just do.},
   url = {https://github.com/HansZ8/RoboJuDo},
   year = {2025}
