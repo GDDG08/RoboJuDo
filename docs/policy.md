@@ -18,6 +18,9 @@ We provide the following policies:
 - [KungfuBotGeneralPolicy](#policy--kungfubotgeneralpolicy)
 - [TwistPolicy](#policy--twistpolicy)
 - [ProtoMotionsTrackerPolicy](#policy--protomotionstrackerpolicy)
+- [UnitreeMjlabVelocityPolicy](#policy--unitreemjlabvelocitypolicy)
+- [BFMZeroPolicy](#policy--bfmzeropolicy)
+- [GentlePolicy](#policy--gentlepolicy)
 
 ## [Policy](#policy) > [UnitreePolicy](#policy--unitreepolicy)
 
@@ -258,5 +261,59 @@ To test your own exported tracker, add:
 ```bash
 --onnx-path /path/to/unified_pipeline.onnx
 ```
+
+
+## [Policy](#policy) > [UnitreeMjlabVelocityPolicy](#policy--unitreemjlabvelocitypolicy)
+
+`UnitreeMjlabVelocityPolicy` deploys ONNX-based velocity tracking policies trained with [unitree_rl_mjlab](https://github.com/unitreerobotics/unitree_rl_mjlab).
+
+script: [g1_unitree_mjlab_velocity_policy.py](../robojudo/policy/g1_unitree_mjlab_velocity_policy.py)
+
+Supports both 29-DoF and 23-DoF variants:
+- `G1UnitreeMjlabVelocity29DoFPolicyCfg` — full 29-joint model (96-dim obs → 29-dim actions), model_dir `demo_29dof`
+- `G1UnitreeMjlabVelocityPolicyCfg` — 23-joint model (78-dim obs → 23-dim actions), model_dir `4900_23dof`
+
+The 23-DoF variant derives from the 29-DoF config using `convert_29dof_to_23dof()` which removes waist and wrist joints.
+
+`commands`:
+- `commands[0]`, [-1, 1], forward / backward velocity
+- `commands[1]`, [-1, 1], left / right velocity
+- `commands[2]`, [-1, 1], turning velocity
+
+Control: Keyboard (`KeyboardCtrlCfg`) with WSAD/QE for velocity commands. On real robot (`g1_unitree_mjlab_velocity_real`), use the Unitree RC controller.
+
+## [Policy](#policy) > [BFMZeroPolicy](#policy--bfmzeropolicy)
+
+`BFMZeroPolicy` deploys policies from [BFM-Zero](https://github.com/LeCAR-Lab/BFM-Zero), a promptable behavioral foundation model supporting three inference modes:
+
+script: [bfm_zero_policy.py](../robojudo/policy/bfm_zero_policy.py)
+
+| Mode | Config (29DoF) | Config (23DoF) | Description |
+|------|----------------|----------------|-------------|
+| **Tracking** | `g1_bfmzero_tracking` | `g1_bfmzero_tracking_23dof` | Motion tracking with prompt switching (`0`–`9` keys) |
+| **Reward** | `g1_bfmzero_reward` | `g1_bfmzero_reward_23dof` | Learned reward-driven behavior (`-` / `=` cycle prompts) |
+| **Goal** | `g1_bfmzero_goal` | `g1_bfmzero_goal_23dof` | Goal-reaching to target poses (`[` / `]` cycle prompts) |
+
+Control: Uses `BFMKeyboardCtrlCfg` with dedicated BFM keyboard mappings:
+- **`0`–`9`**: Select tracking prompt by index (tracking mode)
+- **`-` / `=`**: Cycle through reward prompts (reward mode)
+- **`[` / `]`**: Cycle through goal prompts (goal mode)
+- **`'`**: Toggle between prompt selection and keyboard command mode
+- **WSAD/QE**: Forward/sideways/rotation velocity commands
+
+## [Policy](#policy) > [GentlePolicy](#policy--gentlepolicy)
+
+`GentlePolicy` deploys motion tracking policies from [GentleHumanoid](https://github.com/Axellwppr/gentle-humanoid), supporting whole-body motion tracking with future prediction and compliance control.
+
+script: [gentle_policy.py](../robojudo/policy/gentle_policy.py)
+
+Supports 29-DoF only (no 23-DoF variant). The ONNX model (`policy_latest.onnx`) accepts full 29-joint observations and outputs 29-joint actions.
+
+Config: `g1_gentle` for simulation, `g1_gentle_real` for real robot.
+
+Control: Keyboard (`KeyboardCtrlCfg`) with dedicated triggers:
+- `[` / `]`: MOTION_FADE_IN / MOTION_FADE_OUT
+- `;` / `'`: MOTION_LOAD_NEXT / MOTION_LOAD_PREV
+- `-` / `=`: COMPLIANCE_ON / COMPLIANCE_OFF
 
 

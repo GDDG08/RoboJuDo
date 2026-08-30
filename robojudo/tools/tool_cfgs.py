@@ -86,3 +86,38 @@ class DoFConfig(Config):
                 setattr(self, prop_key, value)
         # print(f"({self.__class__.__name__}) {self.prop_keys}")
         return self
+
+
+def convert_29dof_to_23dof(joint_names_29: list[str], params_29: list[float]) -> list[float]:
+    """Convert 29DoF parameters to 23DoF by removing specific joints.
+
+    Removes: waist_roll, waist_pitch, left_wrist_pitch, left_wrist_yaw,
+    right_wrist_pitch, right_wrist_yaw.
+    """
+    if len(joint_names_29) != len(params_29):
+        raise ValueError(
+            f"Length mismatch: joint_names_29 has {len(joint_names_29)} elements, "
+            f"params_29 has {len(params_29)} elements"
+        )
+    if len(joint_names_29) != 29:
+        raise ValueError(f"Expected 29 joints, got {len(joint_names_29)}")
+
+    joints_to_remove = {
+        "waist_roll_joint",
+        "waist_pitch_joint",
+        "left_wrist_pitch_joint",
+        "left_wrist_yaw_joint",
+        "right_wrist_pitch_joint",
+        "right_wrist_yaw_joint",
+    }
+
+    params_23 = [
+        param
+        for joint_name, param in zip(joint_names_29, params_29)
+        if joint_name not in joints_to_remove
+    ]
+
+    if len(params_23) != 23:
+        raise ValueError(f"Expected 23 parameters after removal, got {len(params_23)}")
+
+    return params_23

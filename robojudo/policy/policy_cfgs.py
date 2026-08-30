@@ -427,3 +427,103 @@ class TwistPolicyCfg(PolicyCfg):
     @property
     def mimic_obs_other_ids(self) -> list[int]:
         return [f for f in range(self.mimic_obs_total_degrees) if f not in self.mimic_obs_wrist_ids]
+
+
+class BFMZeroPolicyCfg(PolicyCfg):
+    disable_autoload: bool = True
+    policy_type: str = "BFMZeroPolicy"
+    policy_name: str = "FBcprAuxModel"
+    train_method: str = "official"
+
+    start_timestep: int = 0
+    action_rescale: int = 5
+    max_timestep: int = -1
+
+    @property
+    def policy_file(self) -> str:
+        policy_file = ASSETS_DIR / f"models/{self.robot}/BFM0/{self.train_method}/{self.policy_name}.onnx"
+        return policy_file.as_posix()
+
+    @property
+    def config_file(self) -> str:
+        config_file = ASSETS_DIR / f"models/{self.robot}/BFM0/{self.train_method}/config.yaml"
+        return str(config_file)
+
+
+class GentlePolicyCfg(PolicyCfg):
+    disable_autoload: bool = True
+
+    policy_type: str = "GentlePolicy"
+    policy_name: str = "policy_latest"
+    model_path: str = "gentleHum"
+
+    @property
+    def policy_file(self) -> str:
+        from robojudo.config import ASSETS_DIR
+        policy_file = ASSETS_DIR / f"models/{self.robot}/{self.model_path}/{self.policy_name}.onnx"
+        return policy_file.as_posix()
+
+    motions_path: str = "assets/motions/g1/gentleHumanoid"
+
+    action_scale: list[float] = [
+        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+        0.5, 0.5, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0,
+        0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0,
+    ]
+    action_clip: float | None = 10.0
+    action_beta: float = 1.0
+
+    joint_pos_steps: list[int] = [0, 1, 2, 3, 4, 8]
+    future_steps: list[int] = [0, 2, 4, 8, 16]
+    prev_actions_steps: int = 3
+
+    compliance_enabled: bool = False
+    compliance_threshold: float = 10.0
+    tracking_enabled: bool = True
+    transition_steps: int = 100
+
+    commands_map: list[list[float]] = [
+        [-1.0, 0.0, 1.0],
+        [1.0, 0.0, -1.0],
+        [1.0, 0.0, -1.0],
+    ]
+
+    @field_validator("action_clip")
+    def check_action_clip(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("action_clip must be positive")
+        return v
+
+    @model_validator(mode="after")
+    def check_action_scale(self):
+        if hasattr(self, 'action_scale') and isinstance(self.action_scale, list):
+            for scale in self.action_scale:
+                if scale <= 0:
+                    raise ValueError("All action_scale values must be positive")
+        return self
+
+
+class UnitreeMjlabVelocityPolicyCfg(PolicyCfg):
+    disable_autoload: bool = True
+
+    class ObsScalesCfg(Config):
+        gravity: float = 1.0
+        dof_pos: float = 1.0
+        dof_vel: float = 1.0
+        ang_vel: float = 1.0
+        command: float = 1.0
+
+    robot: str = "g1"
+    policy_type: str = "G1UnitreeMjlabVelocityPolicy"
+    model_dir: str = "4900_23dof"
+
+    @property
+    def policy_file(self) -> str:
+        from robojudo.config.global_path import ASSETS_DIR
+        policy_file = ASSETS_DIR / f"models/{self.robot}/unitree_mjlab_velocity/{self.model_dir}/policy.onnx"
+        return policy_file.as_posix()
+
+    history_length: int = 1
+    history_obs_dims: dict[str, int] = {}
+    obs_scales: ObsScalesCfg = ObsScalesCfg()

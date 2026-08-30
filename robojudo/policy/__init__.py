@@ -36,3 +36,7 @@ policy_registry.add("AsapLocoPolicy", ".asap_policy")
 policy_registry.add("KungfuBotGeneralPolicy", ".kungfubot_policy")
 policy_registry.add("TwistPolicy", ".twist_policy")
 policy_registry.add("ProtoMotionsTrackerPolicy", ".protomotions_tracker_policy")
+policy_registry.add("BFMZeroPolicy", ".bfm_zero_policy")
+policy_registry.add("G1UnitreeMjlabVelocityPolicy", ".g1_unitree_mjlab_velocity_policy")
+policy_registry.add("GentlePolicy", ".gentle_policy")
+

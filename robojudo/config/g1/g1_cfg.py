@@ -1,5 +1,7 @@
 from robojudo.config import cfg_registry
 from robojudo.controller.ctrl_cfgs import (
+    BFMJoystickCtrlCfg,  # noqa: F401
+    BFMKeyboardCtrlCfg,  # noqa: F401
     JoystickCtrlCfg,  # noqa: F401
     KeyboardCtrlCfg,  # noqa: F401
     UnitreeCtrlCfg,  # noqa: F401
@@ -24,12 +26,25 @@ from .env.g1_real_env_cfg import G1RealEnvCfg, G1UnitreeCfg  # noqa: F401
 from .policy.g1_amo_policy_cfg import G1AmoPolicyCfg  # noqa: F401
 from .policy.g1_asap_policy_cfg import G1AsapLocoPolicyCfg, G1AsapPolicyCfg  # noqa: F401
 from .policy.g1_beyondmimic_policy_cfg import G1BeyondMimicPolicyCfg  # noqa: F401
+from .policy.g1_bfmzero_policy_cfg import (  # noqa: F401
+    G1BFMZeroGoal23DoFPolicyCfg,
+    G1BFMZeroGoalPolicyCfg,
+    G1BFMZeroReward23DoFPolicyCfg,
+    G1BFMZeroRewardPolicyCfg,
+    G1BFMZeroTracking23DoFPolicyCfg,
+    G1BFMZeroTrackingPolicyCfg,
+)
+from .policy.g1_gentle_policy_cfg import G1GentlePolicyCfg  # noqa: F401
 from .policy.g1_h2h_policy_cfg import G1H2HPolicyCfg  # noqa: F401
 from .policy.g1_kungfubot_policy_cfg import G1KungfuBotGeneralPolicyCfg, G1KungfuBotPolicyCfg  # noqa: F401
 from .policy.g1_protomotions_tracker_cfg import ProtoMotionsTrackerPolicyCfg  # noqa: F401
 from .policy.g1_smooth_policy_cfg import G1SmoothPolicyCfg  # noqa: F401
 from .policy.g1_twist_policy_cfg import G1TwistPolicyCfg  # noqa: F401
 from .policy.g1_unitree_policy_cfg import G1UnitreePolicyCfg, G1UnitreeWoGaitPolicyCfg  # noqa: F401
+from .policy.g1_unitree_velocity_policy_cfg import (  # noqa: F401
+    G1UnitreeMjlabVelocity29DoFPolicyCfg,
+    G1UnitreeMjlabVelocityPolicyCfg,
+)
 
 
 # ======================== Basic Configs ======================== #
@@ -399,6 +414,319 @@ class g1_protomotions_tracker_real(g1_protomotions_tracker):
             net_if="eth0",  # note: change to your network interface
         ),
         born_place_align=False,
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+
+
+# ======================== UnitreeMJLab Velocity ======================== #
+
+
+@cfg_registry.register
+class g1_unitree_mjlab_velocity(RlPipelineCfg):
+    """
+    Unitree MJLab Velocity Policy (29-DoF).
+    ONNX-based locomotion policy using the `demo_29dof` model (96-dim obs → 29-dim actions).
+    Uses 29-DoF env with full joint observations.
+
+    Remote control via keyboard: WSAD/QE for forward/backward/left/right/rotation velocity.
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[KeyboardCtrlCfg] = [  # remote control: keyboard velocity commands (WSAD/QE)
+        KeyboardCtrlCfg(),
+    ]
+
+    policy: G1UnitreeMjlabVelocity29DoFPolicyCfg = G1UnitreeMjlabVelocity29DoFPolicyCfg(
+        model_dir="demo_29dof",
+    )
+
+
+@cfg_registry.register
+class g1_unitree_mjlab_velocity_real(g1_unitree_mjlab_velocity):
+    """
+    Unitree MJLab Velocity Policy on real G1 hardware.
+    Remote control via Unitree controller (joystick axes for velocity commands).
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",  # note: change to your network interface
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+@cfg_registry.register
+class g1_unitree_mjlab_velocity_23dof(RlPipelineCfg):
+    """
+    Unitree MJLab Velocity Policy (23-DoF variant).
+    Uses the 23-dof robot model for the G1 robot.
+
+    Remote control via keyboard: WSAD/QE for forward/backward/left/right/rotation velocity.
+    """
+
+    robot: str = "g1"
+    env: G1_23MujocoEnvCfg = G1_23MujocoEnvCfg()
+
+    ctrl: list[KeyboardCtrlCfg] = [  # remote control: keyboard velocity commands (WSAD/QE)
+        KeyboardCtrlCfg(),
+    ]
+
+    policy: G1UnitreeMjlabVelocityPolicyCfg = G1UnitreeMjlabVelocityPolicyCfg(
+        model_dir="4900_23dof",
+    )
+
+
+@cfg_registry.register
+class g1_unitree_mjlab_velocity_23dof_real(g1_unitree_mjlab_velocity_23dof):
+    """
+    Unitree MJLab Velocity 23-DoF Policy on real G1 hardware.
+    Uses the 23-dof robot model for the G1 robot.
+
+    Remote control via Unitree controller (joystick axes for velocity commands).
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",  # note: change to your network interface
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+# ======================== BFMZero ======================== #
+
+
+@cfg_registry.register
+class g1_bfmzero_tracking(RlPipelineCfg):
+    """
+    BFMZero Tracking Policy (29-DoF).
+    Uses tracking prompts to control the G1 robot with position control.
+    Switch between tracking prompts using BFM keyboard controls.
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: 0-9 select tracking prompt, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroTrackingPolicyCfg = G1BFMZeroTrackingPolicyCfg()
+
+
+@cfg_registry.register
+class g1_bfmzero_tracking_real(g1_bfmzero_tracking):
+    """
+    BFMZero Tracking Policy on real G1 hardware.
+    Uses the default Unitree controller for basic safety (A for estop).
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+@cfg_registry.register
+class g1_bfmzero_tracking_23dof(RlPipelineCfg):
+    """
+    BFMZero Tracking Policy (23-DoF).
+    Uses tracking prompts via the 23-joint model.
+    Switch between tracking prompts using BFM keyboard controls.
+    """
+
+    robot: str = "g1"
+    env: G1_23MujocoEnvCfg = G1_23MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: 0-9 select tracking prompt, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroTracking23DoFPolicyCfg = G1BFMZeroTracking23DoFPolicyCfg(
+        train_method="23dof_260411",
+    )
+
+
+@cfg_registry.register
+class g1_bfmzero_reward(RlPipelineCfg):
+    """
+    BFMZero Reward Policy (29-DoF).
+    Uses learned reward-based prompts to control the robot.
+    Switch between reward-driven behaviors with keyboard controls.
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: -= cycle reward prompts, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroRewardPolicyCfg = G1BFMZeroRewardPolicyCfg()
+
+
+@cfg_registry.register
+class g1_bfmzero_reward_real(g1_bfmzero_reward):
+    """
+    BFMZero Reward Policy on real G1 hardware.
+    Uses the default Unitree controller for basic safety (A for estop).
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+@cfg_registry.register
+class g1_bfmzero_reward_23dof(RlPipelineCfg):
+    """
+    BFMZero Reward Policy (23-DoF).
+    Uses learned reward-based prompts via the 23-joint model.
+    Switch between reward-driven behaviors with keyboard controls.
+    """
+
+    robot: str = "g1"
+    env: G1_23MujocoEnvCfg = G1_23MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: -= cycle reward prompts, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroReward23DoFPolicyCfg = G1BFMZeroReward23DoFPolicyCfg(
+        train_method="23dof_260411",
+    )
+
+
+@cfg_registry.register
+class g1_bfmzero_goal(RlPipelineCfg):
+    """
+    BFMZero Goal Policy (29-DoF).
+    Uses goal-reaching prompts to drive the robot to target poses.
+    Select from various goal behaviors (fall, dance, fight, walk, etc.).
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: [] cycle goal prompts, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroGoalPolicyCfg = G1BFMZeroGoalPolicyCfg()
+
+
+@cfg_registry.register
+class g1_bfmzero_goal_real(g1_bfmzero_goal):
+    """
+    BFMZero Goal Policy on real G1 hardware.
+    Uses the default Unitree controller for basic safety.
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",
+        ),
+    )
+    ctrl: list[UnitreeCtrlCfg] = [
+        UnitreeCtrlCfg(),
+    ]
+    do_safety_check: bool = True
+
+
+@cfg_registry.register
+class g1_bfmzero_goal_23dof(RlPipelineCfg):
+    """
+    BFMZero Goal Policy (23-DoF).
+    Uses goal-reaching prompts via the 23-joint model.
+    Select from various goal behaviors (fall, dance, fight, walk, etc.).
+    """
+
+    robot: str = "g1"
+    env: G1_23MujocoEnvCfg = G1_23MujocoEnvCfg()
+
+    ctrl: list[BFMKeyboardCtrlCfg] = [  # BFM remote control: [] cycle goal prompts, WSAD/QE velocity commands
+        BFMKeyboardCtrlCfg(),
+    ]
+
+    policy: G1BFMZeroGoal23DoFPolicyCfg = G1BFMZeroGoal23DoFPolicyCfg(
+        train_method="23dof_260411",
+    )
+
+
+# ======================== GentleHumanoid ======================== #
+
+
+@cfg_registry.register
+class g1_gentle(RlPipelineCfg):
+    """
+    GentleHumanoid Policy (29-DoF).
+    Motion tracking policy from the gentleHum sim2sim project.
+    Supports complex motions with future prediction and compliance control.
+    """
+
+    robot: str = "g1"
+    env: G1MujocoEnvCfg = G1MujocoEnvCfg()
+
+    ctrl: list[KeyboardCtrlCfg] = [  # remote control: [] fade motion, ;' load prev/next, -= compliance toggle
+        KeyboardCtrlCfg(
+            triggers_extra={
+                "]": "[MOTION_FADE_OUT]",
+                "[": "[MOTION_FADE_IN]",
+                ";": "[MOTION_LOAD_NEXT]",
+                "'": "[MOTION_LOAD_PREV]",
+                "-": "[COMPLIANCE_ON]",
+                "=": "[COMPLIANCE_OFF]",
+                "Key.up": "[TRESH_UP]",
+                "Key.down": "[TRESH_DOWN]",
+            },
+        ),
+    ]
+
+    policy: G1GentlePolicyCfg = G1GentlePolicyCfg()
+
+
+@cfg_registry.register
+class g1_gentle_real(g1_gentle):
+    """
+    GentleHumanoid Policy on real G1 hardware.
+    Uses the default Unitree controller for basic safety (A for estop).
+    """
+
+    env: G1RealEnvCfg = G1RealEnvCfg(
+        env_type="UnitreeCppEnv",
+        unitree=G1UnitreeCfg(
+            net_if="eth0",
+        ),
     )
     ctrl: list[UnitreeCtrlCfg] = [
         UnitreeCtrlCfg(),
